@@ -22,7 +22,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "demo": "node examples/demo/make-captures.mjs && node bin/storeshots.mjs build examples/demo/app",
     "readme-images": "node scripts/readme-images.mjs"
   },
