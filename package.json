@@ -1,0 +1,47 @@
+{
+  "name": "storeshots",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "App Store screenshots from your real app: capture, compose in HTML/CSS, check against the store's rules, upload.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MSliwa01/storeshots.git"
+  },
+  "homepage": "https://github.com/MSliwa01/storeshots#readme",
+  "bugs": {
+    "url": "https://github.com/MSliwa01/storeshots/issues"
+  },
+  "bin": {
+    "storeshots": "bin/storeshots.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/",
+    "demo": "node examples/demo/make-captures.mjs && node bin/storeshots.mjs build examples/demo/app",
+    "readme-images": "node scripts/readme-images.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "kit",
+    "skills",
+    "docs/configuration.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "app-store",
+    "screenshots",
+    "ios",
+    "simulator",
+    "app-store-connect",
+    "aso",
+    "cli"
+  ]
+}

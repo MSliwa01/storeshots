@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- storeshots {"background": "flat", "colours": "one", "rhythm": ["hero", "lean", "hang", "offset", "tilt", "hang", "offset", "hang", "offset"]} -->
+<!--
+  Style "neon" (after Ladder, Strava, Nike Training): black and one acid colour, nothing
+  else. Condensed uppercase headlines (Bricolage Grotesque, 75 % width) in white with the
+  accent words in the acid colour; the accent slide flips to an acid field with black type.
+  The acid is the brand hue pushed to full saturation, so every app gets its own.
+  For: fitness, sport, gaming, music, nightlife, anything about energy.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Bricolage; src: url(fonts/BricolageGrotesque.ttf); font-weight: 200 800; font-stretch: 75% 100%; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 80); --hero-top: 31%; --offset-top: 29%; --lean: 5deg; --hang-top: -15%;
+    --caption-top: calc(var(--u) * 10); --caption-bottom: calc(var(--u) * 9); --acid: hsl(var(--hue) 100% 58%); --edge: #26282d; }
+  body { background: #0a0a0b; font-family: Bricolage, sans-serif; }
+  .field { background: #0a0a0b !important; }
+  .field.accent { background: var(--acid) !important; }
+
+  .caption { text-align: center; color: #fff; }
+  h1 { margin: 0; font-weight: 800; font-stretch: 75%; text-transform: uppercase; font-size: calc(var(--u) * 13); line-height: .9; letter-spacing: -.01em; text-wrap: balance; }
+  h1 em { color: var(--acid); }
+  p { margin: calc(var(--u) * 3) auto 0; max-width: 94%; font-weight: 600; font-stretch: 90%; font-size: calc(var(--u) * 5); line-height: 1.2; color: rgba(255, 255, 255, .78); text-wrap: balance; }
+  .slide.accent .caption, .slide.accent h1 em { color: #0a0a0b; }
+  .slide.accent p { color: rgba(10, 10, 11, .78); }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 5) calc(var(--u) * 9) rgba(0, 0, 0, .6)); }
+  .pop { --pop-rim: var(--acid); --pop-rim-width: 6; --pop-shadow: 0 0 0 calc(var(--u) * .7) var(--acid), 0 calc(var(--u) * 3) calc(var(--u) * 9) rgba(0, 0, 0, .6); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1) var(--acid), 0 calc(var(--u) * 5) calc(var(--u) * 12) rgba(0, 0, 0, .6); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- storeshots {"background": "gradient", "colours": "one", "rhythm": ["hero", "lean", "hang", "offset", "tilt", "hang", "offset", "hang", "offset"]} -->
+<!--
+  Style "premium" (after Copilot, Revolut, Flighty): dark, expensive, quiet. Near-black
+  with the brand colour as light rising behind each phone, as if lit from below; a hairline
+  rim on the phones; restrained type (Instrument Sans, medium) with the accent words in the
+  brand light. Nothing loud: the glow and the UI carry it.
+  For: finance, travel, pro tools, security, subscriptions, anything sold on trust.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Instrument; src: url(fonts/InstrumentSans.ttf); font-weight: 400 700; font-stretch: 75% 100%; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 80); --hero-top: 30%; --offset-top: 28%; --lean: 5deg; --hang-top: -15%;
+    --caption-top: calc(var(--u) * 11); --caption-bottom: calc(var(--u) * 10); --edge: #3a3d45; }
+  body { background: #07080b; font-family: Instrument, sans-serif; }
+  .field.gradient { background:
+    radial-gradient(85% 42% at 50% 80%, color-mix(in srgb, var(--bg) 62%, transparent), transparent 72%),
+    radial-gradient(70% 30% at 15% 8%, color-mix(in srgb, var(--bg) 22%, transparent), transparent 70%),
+    radial-gradient(60% 22% at 50% 0%, rgba(255, 255, 255, .06), transparent 70%),
+    linear-gradient(180deg, #0d0f14 0%, #07080b 100%); }
+  .field.gradient.accent { background:
+    radial-gradient(90% 50% at 50% 70%, color-mix(in srgb, var(--bg) 70%, transparent), transparent 75%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 30%, #07080b), #07080b); }
+
+  .caption { text-align: center; color: #fff; }
+  h1 { margin: 0; font-weight: 560; font-size: calc(var(--u) * 10.2); line-height: 1.05; letter-spacing: -.03em; text-wrap: balance; }
+  h1 em { color: color-mix(in srgb, var(--bg) 55%, white); }
+  p { margin: calc(var(--u) * 2.6) auto 0; max-width: 94%; font-weight: 450; font-size: calc(var(--u) * 5); line-height: 1.22; color: rgba(255, 255, 255, .7); text-wrap: balance; }
+
+  /* Rim light: a hairline outline and a coloured lift, no grey shadow on black. */
+  .device { filter: drop-shadow(0 0 1px rgba(255, 255, 255, .35)) drop-shadow(0 calc(var(--u) * 6) calc(var(--u) * 10) rgba(0, 0, 0, .7)); }
+  .pop { --pop-rim: rgba(255, 255, 255, .3); --pop-rim-width: 3; --pop-drop: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 5) rgba(0, 0, 0, .7)); --pop-shadow: 0 0 0 1px rgba(255, 255, 255, .22), 0 calc(var(--u) * 3) calc(var(--u) * 10) rgba(0, 0, 0, .65); }
+  .device.is-3d .device-shadow { --shadow-alpha: .7; }
+  .c-closer .closer-icon { box-shadow: 0 0 0 1px rgba(255, 255, 255, .2), 0 0 calc(var(--u) * 14) color-mix(in srgb, var(--bg) 45%, transparent); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

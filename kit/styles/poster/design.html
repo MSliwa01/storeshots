@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- storeshots {"background": "flat", "colours": "one"} -->
+<!--
+  Style "poster": loud, clean, confident (after Deepstash, Ziggy, Cash App).
+  - each slide a flat field: slide.bg → app.palette → hues next to the brand; no gradients,
+    no texture, the colour carries the set;
+  - text colour per slide chosen for ≥ 4.5:1 (white, or ink on light fields);
+  - centred headline in Bricolage Grotesque condensed, the accent words in a pill
+    (white pill with text in the field's colour, or ink pill on light fields);
+  - phones centred, one size; the lean slide tilts its phone.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Bricolage; src: url(fonts/BricolageGrotesque.ttf); font-weight: 200 800; font-stretch: 75% 100%; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 80); --hero-top: 27%; --offset-top: 26%; --lean: 5deg; --hang-top: -16%; --caption-top: calc(var(--u) * 9.5); --caption-bottom: calc(var(--u) * 9); }
+  body { background: var(--deep); font-family: Bricolage, sans-serif; }
+
+  .field { position: absolute; top: 0; width: var(--slide-w); height: 100%; }
+
+  .caption { text-align: center; color: var(--fg); }
+  h1 { margin: 0; font-weight: 800; font-stretch: 80%; font-size: calc(var(--u) * 12.4); line-height: .95; letter-spacing: -.015em; text-wrap: balance; }
+  h1 em { display: inline-block; padding: .02em .2em .1em; margin-top: .08em; border-radius: .2em; background: var(--pill-bg); color: var(--pill-fg); rotate: -1.5deg; }
+  p { margin: calc(var(--u) * 3.2) 0 0; font-weight: 600; font-stretch: 92%; font-size: calc(var(--u) * 5.3); line-height: 1.15; color: var(--sub); }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 5) calc(var(--u) * 6) rgba(0, 0, 0, .3)); }
+  .pop { --pop-radius: calc(var(--u) * 2.6); --pop-shadow: 0 0 0 calc(var(--u) * .8) #fff, 0 calc(var(--u) * 3) calc(var(--u) * 7) rgba(0, 0, 0, .3); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1.4) #fff, 0 calc(var(--u) * 5) calc(var(--u) * 10) rgba(0, 0, 0, .3); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

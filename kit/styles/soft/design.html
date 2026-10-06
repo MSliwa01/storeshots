@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- storeshots {"background": "gradient", "colours": "one", "rhythm": ["hero", "lean", "hang", "offset", "tilt", "hang", "offset", "hang", "offset"]} -->
+<!--
+  Style "soft" (after Structured, Tiimo, Finch): calm, friendly, light. A pastel field in
+  the brand colour with a soft light from above; ink text with the accent words heavier and
+  in the brand's deep tone; phones on a tinted shadow. Dark app screens read as objects on
+  paper, light ones as cards.
+  Type: Manrope, a light line and a heavy accent.
+  For: planners, habits, self-care, family, home, utilities with a friendly voice.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Manrope; src: url(fonts/Manrope.ttf); font-weight: 200 800; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 80); --hero-top: 30%; --offset-top: 28%; --lean: 5deg; --hang-top: -15%;
+    --caption-top: calc(var(--u) * 11); --caption-bottom: calc(var(--u) * 10); --ink: #1b1d22; }
+  body { background: #fff; font-family: Manrope, sans-serif; }
+
+  /* The pastel: the slide's colour mixed into white, lighter at the top. */
+  .field.gradient { background:
+    radial-gradient(110% 45% at 50% 0%, color-mix(in srgb, var(--bg) 10%, white) 0%, transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 20%, white) 0%, color-mix(in srgb, var(--bg) 30%, white) 100%); }
+
+  .caption { text-align: center; color: var(--ink); }
+  h1 { margin: 0; font-weight: 500; font-size: calc(var(--u) * 10.8); line-height: 1.04; letter-spacing: -.04em; text-wrap: balance; }
+  h1 em { font-weight: 800; color: color-mix(in srgb, var(--bg) 62%, black); letter-spacing: -.045em; }
+  p { margin: calc(var(--u) * 2.8) auto 0; max-width: 94%; font-weight: 600; font-size: calc(var(--u) * 5); line-height: 1.2; color: rgba(27, 29, 34, .7); text-wrap: balance; }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 5) calc(var(--u) * 7) color-mix(in srgb, var(--bg) 45%, rgba(0, 0, 0, .35))); }
+  .pop { --pop-shadow: 0 0 0 calc(var(--u) * .6) #fff, 0 calc(var(--u) * 3) calc(var(--u) * 8) color-mix(in srgb, var(--bg) 40%, rgba(0, 0, 0, .3)); }
+  .device.is-3d .device-shadow { background: color-mix(in srgb, var(--bg) 50%, rgba(0, 0, 0, .5)); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1.2) #fff, 0 calc(var(--u) * 5) calc(var(--u) * 10) color-mix(in srgb, var(--bg) 40%, rgba(0, 0, 0, .3)); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

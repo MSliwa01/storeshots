@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- storeshots {"background": "flat", "colours": "one"} -->
+<!--
+  Style "editorial": light, crafted, magazine-like. A warm paper tinted with the brand hue;
+  a tall arch in the brand colour stands behind each phone like a window, the same on every
+  slide. Fraunces headlines with the accent words in Fraunces italic and the brand colour;
+  Manrope subtitles. Long soft shadows tinted with the brand, never grey.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Fraunces; src: url(fonts/Fraunces.ttf); font-weight: 100 900; }
+  @font-face { font-family: Fraunces; font-style: italic; src: url(fonts/Fraunces-Italic.ttf); font-weight: 100 900; }
+  @font-face { font-family: Manrope; src: url(fonts/Manrope.ttf); font-weight: 200 800; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 76); --hero-top: 33%; --lean: 5deg; --hang-top: -16%; }
+  body { background: var(--paper); font-family: Manrope, sans-serif; color: var(--ink); }
+
+  .paper { position: absolute; inset: 0; background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%); }
+  .arch { position: absolute; width: calc(var(--u) * 84); height: 74%; bottom: -6%; border-radius: calc(var(--u) * 42) calc(var(--u) * 42) 0 0;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 78%, white), var(--brand)); }
+
+  h1 { margin: 0; font-family: Fraunces, serif; font-weight: 600; font-size: calc(var(--u) * 11.6); line-height: 1; letter-spacing: -.025em; font-variation-settings: "opsz" 144, "SOFT" 30; text-wrap: balance; }
+  h1 em { font-style: italic; font-weight: 500; color: var(--accent-on-light); }
+  p { margin: calc(var(--u) * 2.8) 0 0; font-weight: 600; font-size: calc(var(--u) * 5); line-height: 1.2; color: color-mix(in srgb, var(--ink) 78%, transparent); }
+
+  .device { filter: drop-shadow(calc(var(--u) * 2) calc(var(--u) * 6) calc(var(--u) * 7) color-mix(in srgb, var(--deep) 45%, transparent)); }
+  .pop { --pop-radius: calc(var(--u) * 2.6); --pop-shadow: 0 calc(var(--u) * 3) calc(var(--u) * 8) color-mix(in srgb, var(--deep) 35%, transparent); }
+  .c-closer .closer-icon { box-shadow: 0 calc(var(--u) * 5) calc(var(--u) * 12) color-mix(in srgb, var(--deep) 40%, transparent); }
+  {{COMPOSITIONS}}
+</style>
+<script>
+  // An arch behind every phone, aligned with the phone's composition.
+  window.beforeFit = () => {
+    const strip = document.querySelector('.strip'), devices = [...document.querySelectorAll('.device')];
+    for (const d of devices.filter(d => !d.classList.contains('d-fan'))) {
+      const a = document.createElement('div');
+      a.className = 'arch';
+      const i = Number(d.style.getPropertyValue('--i'));
+      a.style.left = `calc(var(--slide-w) * ${i} + var(--u) * 8)`; // phones are centred
+      if (d.classList.contains('d-hang')) Object.assign(a.style, { top: '-6%', bottom: 'auto', height: '66%', borderRadius: '0 0 calc(var(--u) * 42) calc(var(--u) * 42)' });
+      strip.insertBefore(a, strip.children[1]);
+    }
+    for (const s of document.querySelectorAll('.c-closer')) {
+      const a = document.createElement('div'); a.className = 'arch';
+      a.style.left = `calc(${s.offsetLeft}px + var(--u) * 8)`;
+      strip.insertBefore(a, strip.children[1]);
+    }
+  };
+</script>
+</head>
+<body>
+<div class="strip">
+  <div class="paper"></div>
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/* Shared compositions, inlined into every style. Units: --u = 1 % of the slide width.
+   A device's slide index is --i; styles tune --phone-w, --hero-top, --lean, --hang-top,
+   --caption-top, --caption-bottom. Every phone stays inside its own slide. */
+.slide { z-index: 3; }
+.caption { position: absolute; inset-inline: calc(var(--u) * 8); top: var(--caption-top, calc(var(--u) * 10)); }
+.caption.bottom { top: auto; bottom: var(--caption-bottom, calc(var(--u) * 10)); }
+.caption.center { text-align: center; }
+
+.device { position: absolute; z-index: 1; width: var(--phone-w, calc(var(--u) * 80)); }
+/* One phone size for the whole set (3D poses excepted): only position and pose change. */
+.d-hero, .d-hang, .d-offset { left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80))) / 2); }
+.d-hero { top: var(--hero-top, 32%); }
+.d-offset { top: var(--offset-top, 33%); }
+.d-hang { top: var(--hang-top, -18%); }
+/* Lean: the same phone, centred and tilted (--lean); its empty corners mirror each other. */
+/* A tilt widens the phone by its height × sin(angle), so the tilted phone is a little smaller
+   (90 %) and tilted gently (5°): its corners keep a clear margin from both slide edges instead
+   of grazing the neighbour. */
+.d-lean { width: calc(var(--phone-w, calc(var(--u) * 80)) * .9); left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .9) / 2);
+  top: calc(var(--slide-h) + var(--u) * 10 - var(--phone-w, calc(var(--u) * 80)) * .9 * 2.0408); rotate: var(--lean, 5deg); } /* still runs off the bottom */
+
+/* Pop-outs: grow past the bezel (--pop-reach = width as a share of the phone's). */
+.d-hero .pop { --pop-reach: 1.08; }
+.d-hang .pop { --pop-reach: 1.08; }
+.d-offset .pop { --pop-reach: 1.1; }
+.d-lean .pop { --pop-reach: 1.04; }
+
+/* Closer with a fan: the icon and the line at the top, the set's screens below as small
+   phones in an arc (centre one in front), running off the bottom edge. */
+.c-closer.with-fan .closer-icon { top: 10%; left: calc(50% - var(--u) * 13); width: calc(var(--u) * 26); }
+.c-closer.with-fan .caption { top: 24%; }
+.d-fan { width: calc(var(--u) * 42); left: calc(var(--slide-w) * var(--i) + var(--u) * (29 + var(--k) * 25));
+  top: calc(58% + var(--u) * 7 * var(--k) * var(--k)); rotate: calc(var(--k) * 5deg); z-index: calc(10 - var(--k) * var(--k));
+  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .28)); }
+
+/* Closer: no phone, the app icon and one statement. */
+.c-closer .closer-icon { position: absolute; left: calc(50% - var(--u) * 21); top: 31%; width: calc(var(--u) * 42); aspect-ratio: 1; border-radius: 22.5%;
+  box-shadow: 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, .35); }
+.c-closer .caption { top: 58%; }
+
+/* 3D: a camera on the phone, real thickness (--depth), pops lifted along z.
+   tilt: turned towards the caption; lay: lying on the slide, seen from above. */
+.d-tilt { --depth: .1; left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .92) / 2); top: var(--tilt-top, 29%);
+  width: calc(var(--phone-w, calc(var(--u) * 80)) * .92); transform: perspective(calc(var(--u) * 520)) rotateY(var(--tilt-y, -26deg)) rotateX(var(--tilt-x, 10deg)) rotateZ(var(--tilt-z, -3deg)); }
+.d-tilt .pop { --pop-reach: 1; --pop-z: calc(var(--u) * 6); }
+.d-lay { --depth: .1; --shadow-y: 0; left: calc(var(--slide-w) * var(--i) + var(--u) * 17); top: var(--lay-top, 25%); width: calc(var(--phone-w, calc(var(--u) * 80)) * .82);
+  transform: perspective(calc(var(--u) * 520)) rotateX(var(--lay-x, 34deg)) rotateZ(var(--lay-z, -4deg)); transform-origin: 50% 0; }
+.d-lay .pop { --pop-reach: 1.02; --pop-z: calc(var(--u) * 16); }
+
+/* A slide with a laurel under its caption: its phone starts lower. */
+.device.with-proof:not(.d-hang) { margin-top: calc(var(--u) * 13); }

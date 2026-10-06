@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- storeshots {"background": "gradient", "colours": "one", "rhythm": ["hero", "lean", "hang", "offset", "hang", "offset", "hang", "offset", "hang"]} -->
+<!--
+  Style "playful" (after Finch, Duolingo, Headspace): warm, round, cheerful. A bright pastel
+  of the brand with two big soft bubbles per slide (fixed positions, not random), rounded
+  heavy type (Nunito Black) with the accent words in the brand colour, phones on chunky soft
+  shadows. Best with the app's own character on the closer (the app icon); never add a
+  mascot the app does not have.
+  For: kids, habits, learning, pets, games, self-care with a character.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Nunito; src: url(fonts/Nunito.ttf); font-weight: 200 1000; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 78); --hero-top: 31%; --offset-top: 29%; --lean: 5deg; --hang-top: -15%;
+    --caption-top: calc(var(--u) * 10); --caption-bottom: calc(var(--u) * 9); --ink: #1d1b26; }
+  body { background: #fff; font-family: Nunito, sans-serif; }
+  /* Bright, not pastel-grey: the brand at full chroma lifted towards white, warmer at the top. */
+  .field.gradient { overflow: hidden; background: linear-gradient(180deg, color-mix(in srgb, hsl(from var(--bg) h 85% 62%) 42%, white) 0%, color-mix(in srgb, hsl(from var(--bg) h 85% 58%) 62%, white) 100%); }
+  .field.gradient::before { content: ""; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .35);
+    width: calc(var(--u) * 120); aspect-ratio: 1; left: calc(var(--u) * -10); top: 58%; }
+  .caption { text-align: center; color: var(--ink); }
+  h1 { margin: 0; font-weight: 900; font-size: calc(var(--u) * 10.4); line-height: 1.02; letter-spacing: -.02em; text-wrap: balance; }
+  h1 em { color: color-mix(in srgb, hsl(from var(--bg) h 80% 40%) 85%, black); }
+  p { margin: calc(var(--u) * 2.6) auto 0; max-width: 94%; font-weight: 700; font-size: calc(var(--u) * 5); line-height: 1.2; color: rgba(29, 27, 38, .72); text-wrap: balance; }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 3) 0 color-mix(in srgb, var(--bg) 60%, black)) drop-shadow(0 calc(var(--u) * 6) calc(var(--u) * 8) rgba(0, 0, 0, .18)); }
+  .pop { --pop-rim: #fff; --pop-rim-width: 9; --pop-shadow: 0 0 0 calc(var(--u) * 1) #fff, 0 calc(var(--u) * 1.6) 0 calc(var(--u) * 1) color-mix(in srgb, var(--bg) 55%, black), 0 calc(var(--u) * 5) calc(var(--u) * 8) rgba(0, 0, 0, .2); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1.6) #fff, 0 calc(var(--u) * 2) 0 calc(var(--u) * 1.6) color-mix(in srgb, var(--bg) 55%, black); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

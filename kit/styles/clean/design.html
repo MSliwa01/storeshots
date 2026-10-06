@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- storeshots {"background": "gradient", "colours": "one", "rhythm": ["hero", "lean", "hang", "offset", "hang", "offset", "hang", "offset", "hang"]} -->
+<!--
+  Style "clean" (after Fantastical and Apple's own pages): quiet, precise, light. A near
+  white field barely tinted with the brand; ink headlines in Instrument Sans with the accent
+  words in the brand colour; crisp phones on soft grey shadows. The UI does the talking.
+  For: productivity, tools, developer and pro apps, anything that wants to look native.
+  The default style for `storeshots init`.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Instrument; src: url(fonts/InstrumentSans.ttf); font-weight: 400 700; font-stretch: 75% 100%; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 80); --hero-top: 30%; --offset-top: 28%; --lean: 5deg; --hang-top: -15%;
+    --caption-top: calc(var(--u) * 11); --caption-bottom: calc(var(--u) * 10); --ink: #16181d; }
+  body { background: #f5f6f8; font-family: Instrument, sans-serif; }
+  .field.gradient { background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 3%, #fbfbfc) 0%, color-mix(in srgb, var(--bg) 7%, #eef0f3) 100%); }
+  .field.gradient.accent { background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 14%, white), color-mix(in srgb, var(--bg) 24%, white)); }
+
+  .caption { text-align: center; color: var(--ink); }
+  h1 { margin: 0; font-weight: 680; font-size: calc(var(--u) * 10.6); line-height: 1.03; letter-spacing: -.035em; text-wrap: balance; }
+  h1 em { color: color-mix(in srgb, var(--bg) 78%, black); }
+  p { margin: calc(var(--u) * 2.6) auto 0; max-width: 94%; font-weight: 500; font-size: calc(var(--u) * 5); line-height: 1.2; color: rgba(22, 24, 29, .62); text-wrap: balance; }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 4) calc(var(--u) * 7) rgba(20, 24, 32, .2)); }
+  .pop { --pop-rim: none; --pop-drop: drop-shadow(0 0 1px rgba(0, 0, 0, .12)) drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 5) rgba(20, 24, 32, .22)); --pop-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 calc(var(--u) * 3) calc(var(--u) * 8) rgba(20, 24, 32, .22); }
+  .device.is-3d .device-shadow { --shadow-alpha: .22; }
+  .c-closer .closer-icon { box-shadow: 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(20, 24, 32, .2); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

@@ -1,0 +1,80 @@
+/*
+  Building blocks every design gets, loaded before the design's own CSS.
+  The page is one strip of slides side by side (a connected canvas): the renderer
+  crops each .slide into its own PNG, so anything may cross a seam on purpose.
+  Units: --u is 1% of the slide width, so sizes carry over between devices.
+*/
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  width: max-content;
+  height: var(--slide-h);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+.strip { position: relative; display: flex; width: max-content; height: var(--slide-h); }
+.slide { position: relative; flex: none; width: var(--slide-w); height: var(--slide-h); }
+
+/* Apple bezel over the capture; kit.js sizes the screen to the bezel's opening. */
+.device { position: relative; flex: none; }
+.device > .device-screen { position: absolute; overflow: hidden; background: #000; }
+.device > .device-screen > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.device > .device-bezel { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* 3D phone: kit.js adds .is-3d, edge layers and a ground shadow when --depth > 0. */
+.device.is-3d { transform-style: preserve-3d; filter: none !important; }
+.device.is-3d > .device-screen { transform: translateZ(0); }
+.device.is-3d > .device-bezel { transform: translateZ(1px); }
+.device > .device-edge { position: absolute; inset: 0; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+.device > .device-shadow { position: absolute; inset: 6% 8%; border-radius: 18% / 8%; background: rgba(0, 0, 0, var(--shadow-alpha, .42));
+  filter: blur(calc(var(--u) * 4)); transform: translate3d(var(--shadow-x, 0), var(--shadow-y, 4%), calc(var(--u) * -14)); }
+
+/* The capture without a bezel. Set --screen-radius for the display's rounded corners. */
+.screen { position: relative; flex: none; overflow: hidden; border-radius: var(--screen-radius, 0); }
+.screen > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* A crop of a capture shown on its own, sized by CSS. */
+.zoom { flex: none; background-repeat: no-repeat; }
+
+/* Pop-out: child of .device, sits on its source and grows out of the screen. */
+.device > .pop {
+  position: absolute;
+  background-repeat: no-repeat;
+  border-radius: var(--pop-radius, 0);
+  transform: translate3d(var(--pop-x, 0), var(--pop-y, 0), var(--pop-z, 0)) scale(var(--pop-scale, 1.15));
+  transform-origin: var(--pop-origin, center var(--pop-oy, 50%));
+  box-shadow: var(--pop-shadow, 0 calc(var(--u) * 2) calc(var(--u) * 6) rgba(0, 0, 0, .55));
+}
+.device > .pop-hole { position: absolute; border-radius: var(--hole-radius, 0); }
+/* Under a lifted element the rest of the screen steps back a little (blur, dim), so the
+   half-covered rows around it do not compete with it. --pop-veil: none turns it off. */
+.device.has-pop > .device-screen > img { filter: var(--pop-veil, blur(calc(var(--u) * .16)) brightness(.95) saturate(.92)); }
+/* Surface pops are cut along their silhouette (kit.js): no box shadow (it would be a
+   rectangle), a drop-shadow that follows the alpha, and a rim drawn into the image. */
+:where(.device > .pop) { --pop-rim: rgba(255, 255, 255, .95); --pop-rim-width: 5; }
+.device > .pop.matte { box-shadow: none !important; border-radius: 0 !important;
+  filter: var(--pop-drop, drop-shadow(0 calc(var(--u) * 1.6) calc(var(--u) * 3.5) rgba(0, 0, 0, .45))); }
+.device > .pop.framed { box-shadow: var(--pop-shadow, 0 0 0 calc(var(--u) * .4) rgba(255, 255, 255, .95), 0 calc(var(--u) * 2) calc(var(--u) * 6) rgba(0, 0, 0, .45)); }
+
+:where([data-text]) em { font-style: normal; }
+[data-missing] { outline: 6px dashed #ff2d55; min-height: 40px; }
+
+/* Backgrounds written by `storeshots style` ({{FIELDS}}): one .field per slide.
+   glow: every slide's own screen in one .glow-strip, blurred together into light (no seams
+   between slides); the fields above it only carry the scrim. backdrop: one image behind
+   the whole strip. */
+.field { position: absolute; top: 0; width: var(--slide-w); height: 100%; }
+.glow-strip { position: absolute; top: -6%; bottom: -6%; left: calc(var(--slide-w) * -0.15);
+  filter: blur(var(--glow-blur, calc(var(--u) * 7))) saturate(var(--glow-saturate, 1.35)) brightness(var(--glow-brightness, .8)); }
+.glow-strip > .glow { position: absolute; top: 0; height: 100%; object-fit: cover; }
+.backdrop { position: absolute; inset: 0; background-size: cover; background-position: center; }
+
+/* Social proof laurel (src/proof.mjs), inside a caption: takes the caption's colour. */
+.proof { display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 1.6); margin-top: calc(var(--u) * 3.4); color: inherit; }
+.proof .laurel { width: calc(var(--u) * 6.4); height: calc(var(--u) * 10.6); flex: none; opacity: .9; }
+.proof .laurel.right { transform: scaleX(-1); }
+.proof-body { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.proof-body b { font-size: calc(var(--u) * 5.4); font-weight: 750; letter-spacing: -.01em; white-space: nowrap; }
+.proof-body .stars { font-size: .78em; letter-spacing: .06em; margin-left: .1em; }
+.proof-body small { margin-top: calc(var(--u) * .5); font-size: calc(var(--u) * 4.2); font-weight: 600; opacity: .8; white-space: nowrap; }

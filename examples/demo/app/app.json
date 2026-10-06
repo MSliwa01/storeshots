@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "Sprout",
+    "icon": "./icon.png",
+    "primaryColor": "#2f9e6e",
+    "ios": { "bundleIdentifier": "com.example.sprout" }
+  }
+}

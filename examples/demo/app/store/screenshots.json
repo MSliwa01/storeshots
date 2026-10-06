@@ -1,0 +1,129 @@
+{
+  "app": {
+    "name": "Sprout",
+    "bundleId": "com.example.sprout",
+    "icon": "../icon.png",
+    "ascAppId": null,
+    "accent": "#2f9e6e"
+  },
+  "locales": [
+    "en"
+  ],
+  "devices": {
+    "iphone-6.9": {
+      "frame": "generic/black"
+    }
+  },
+  "capture": {
+    "bundleId": "com.example.sprout",
+    "appearance": "light",
+    "wait": 5,
+    "args": {
+      "DemoMode": "YES"
+    }
+  },
+  "shots": {
+    "today": {
+      "args": {
+        "DemoScreen": "today"
+      }
+    },
+    "plant": {
+      "args": {
+        "DemoScreen": "plant"
+      }
+    },
+    "insights": {
+      "args": {
+        "DemoScreen": "insights"
+      }
+    },
+    "calendar": {
+      "args": {
+        "DemoScreen": "calendar"
+      }
+    },
+    "reminders": {
+      "args": {
+        "DemoScreen": "reminders"
+      }
+    }
+  },
+  "slides": [
+    {
+      "id": "today",
+      "shot": "today",
+      "pop": {
+        "box": [
+          60,
+          417,
+          1200,
+          258
+        ],
+        "radius": 63,
+        "behind": "#f3f6f2",
+        "cut": "surface",
+        "fill": "#ffffff"
+      }
+    },
+    {
+      "id": "plant",
+      "shot": "plant"
+    },
+    {
+      "id": "insights",
+      "shot": "insights",
+      "pop": {
+        "box": [
+          108,
+          481,
+          566,
+          278
+        ],
+        "radius": 63,
+        "behind": "#ffffff",
+        "cut": "frame",
+        "pad": 48
+      }
+    },
+    {
+      "id": "calendar",
+      "shot": "calendar",
+      "pop": {
+        "box": [
+          108,
+          765,
+          1104,
+          126
+        ],
+        "radius": 63,
+        "behind": "#ffffff",
+        "cut": "frame",
+        "pad": 48
+      }
+    },
+    {
+      "id": "reminders",
+      "shot": "reminders",
+      "pop": {
+        "box": [
+          60,
+          1035,
+          1200,
+          435
+        ],
+        "radius": 63,
+        "behind": "#f3f6f2",
+        "cut": "surface",
+        "fill": "#ffffff"
+      }
+    },
+    {
+      "id": "closer",
+      "shot": null
+    }
+  ],
+  "look": {
+    "style": "soft"
+  }
+}
