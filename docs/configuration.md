@@ -55,6 +55,14 @@ The set, in order. Without `slides` there is one slide per shot.
 | `pop` | written by `storeshots elements --pick`: the lifted element (`box` in capture pixels, `radius`, `behind`, `cut`: `surface` or `frame`, with `fill` or `pad`) |
 | `bg` | this slide's background colour |
 
+## Pop-outs
+`storeshots elements` reads a screen as flat surfaces (card, inner card, chip) plus blocks of content between gaps. It cuts each candidate in one of two ways:
+
+- **Surfaces** (cards, chips, bubbles) are cut along their real outline. The colour behind them is keyed out, so iOS corners and bubble tails stay exact.
+- **Blocks** (a few lines of a card, a calendar week, two stacked cards) get a container with even padding taken from the app's own spacing.
+
+The ranking uses size, colour, type size and the words the candidate shares with the headline (OCR, if tesseract is installed). It is a starting point. You choose from the numbered sheet. `--pick` writes the chosen element into the slide's `pop` key.
+
 ## look
 | Key | |
 |---|---|
@@ -79,3 +87,13 @@ Each style sets its own defaults for `colours`, `background` and the layout rhyt
 | `STORESHOTS_HOME` | where downloads are kept (Apple bezels, the reference library); default: the repo in a git clone, `~/.cache/storeshots` for an npm install |
 | `STORESHOTS_FRAMES` | where Apple bezels are kept (overrides `STORESHOTS_HOME` for them) |
 | `IMAGE_API_BASE`, `IMAGE_API_KEY` | optional, for `storeshots art` |
+
+## Project layout
+```
+store/
+  screenshots.json    app, locales, devices, capture, shots, slides, look
+  brief.md            audience, benefits, story, decisions
+  copy/<locale>.json  headline and subtitle per slide
+  design/<style>.html the set as one page (written by `storeshots style`, editable)
+  output/             raw/, final/, review/, elements/, catalog/ (gitignored)
+```
