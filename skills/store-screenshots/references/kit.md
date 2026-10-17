@@ -1,6 +1,6 @@
 # Writing a design (`store/design/iphone.html`)
 
-A design is one HTML page: a `.strip` of `<section class="slide">` side by side. The renderer injects the kit and the data, renders the whole strip at once, and crops each slide into `NN-<id>.png`. Because it is one canvas, elements may deliberately cross from one slide into the next. Starting point: `storeshots init` writes one from a style; a complete example is `examples/demo` in the tool repo.
+A design is one HTML page: a `.strip` of `<section class="slide">` side by side. The renderer injects the kit and the data, renders the whole strip at once, and crops each slide into `NN-<id>.png`. Because it is one canvas, elements may deliberately cross from one slide into the next. Starting point: `storeshots init` writes one from a style; complete examples are `examples/bloomling` and `examples/truesky` in the tool repo.
 
 ## Injected for you
 - `kit/kit.css` (loaded before your CSS, so yours wins), `kit/kit.js`, `window.SHOTS`.
@@ -22,7 +22,8 @@ A design is one HTML page: a `.strip` of `<section class="slide">` side by side.
   </section>
 </div>
 ```
-- `data-text="a.b"` reads `copy/<locale>.json`. `*word*` → `<em>`, `\n` → line break.
+- `data-text="a.b"` reads `copy/<locale>.json`. `*word*` → `<em>`, `\n` → line break. Typesetting is automatic (`kit/typeset.js`): `...` → …, `5-10` → 5–10, a number never ends a line, and in Polish, Czech and Slovak one-letter words stay with the next word; quotes become „…” where the language uses them. Keep the copy files plain.
+- `data-behind` on a text that is meant to sit behind a phone (a big word the phone covers): `check` then skips its hidden letters. Without it, any letter mostly hidden by something drawn over it fails.
 - `data-fit` shrinks the font (3% steps, down to `data-min` px, default 60%) until the text fits its width, `data-lines`, and its CSS `max-height` if you set one. Treat any shrink as a copy problem: `storeshots check` warns, rewrite the line.
 - Roles for `storeshots check`: `data-role="title"` (2 lines max, one size across the set, ≥ 6 % hard floor), `data-role="sub"` (one line). Any text below 4 % of the width fails.
 - Frame colours for iPhone 18 Pro Max: black, silver, glacier, burgundy. Default comes from `screenshots.json`.
@@ -47,10 +48,13 @@ Linux has no SF Pro. Bundle font files in `design/fonts/` (OFL fonts such as Int
   - A pop is the one thing the headline names: prefer a block of the essential lines ("Tomorrow · Wed 21 · Glass") over the whole card with its header and controls.
 - A `.pop` inside a `.device` sits exactly on its source (crop in capture px), then `--pop-reach` (its width as a share of the phone's, e.g. 1.08: the kit derives the scale) or `--pop-scale`, `--pop-x`, `--pop-y`, `--pop-z`, `--pop-origin`, `rotate` move it out of the bezel. It grows away from the screen edge it is near, and the kit slides it back inside its slide if it would be cut. Style it with `--pop-radius` (when there is no `data-radius`), `--pop-shadow`.
 - 3D: set `--depth` on a `.device` (thickness as a share of its width, ~0.1) and give it a camera `transform` (e.g. `perspective(calc(var(--u) * 260)) rotateY(-24deg) rotateX(10deg)`). The kit then stacks edge layers cut to the bezel's silhouette (the phone's sides, shade from `--edge`), adds a ground shadow (`--shadow-x/-y/-alpha`), keeps it all in one 3D context, shrinks the projection to fit its slide, and pops lift with `--pop-z`. Ready-made: compositions `d-tilt` and `d-lay` (`slides[].layout`). Never put `filter` on a 3D `.device` (it flattens the pops; the kit overrides it). A lifted pop exposes its source: `data-leave` (written by `storeshots elements` as `behind`) paints that spot so it reads as a slot, not a duplicate.
-- `check` warns when a phone crosses a slide edge (measured on what shows inside the slide); add `data-cross` to a device that should.
+- `check` warns when a phone crosses a slide edge (measured on what shows inside the slide); add `data-cross` to a device that should. With tesseract installed it also warns when a slide's left or right edge cuts a word on the phone's screen, `data-cross` or not.
 - **Never leave the original visible next to its copy** (it reads as duplicated text). Either keep the pop over its source and only grow it (scale ≥ 1.1, small offset), or move it away and set `data-leave="<bg colour>"`, which paints the source's spot so the row looks lifted out. Sample the background colour from the capture (e.g. `#1c1c1e` cards, `#000` page in iOS dark mode).
 - For a crop `elements` misses, measure on the raw capture with a grid: `ffmpeg -i raw.png -vf "drawgrid=w=100:h=100:t=2:c=red@0.6" grid.png`.
 - The kit inserts sibling elements (screen, bezel, holes) into `.device`, so never target pops with `:nth-of-type` / `:nth-child`; give each pop its own class (`p1`, `p2`…).
+
+## Lifts, zoom and spreads
+All three come from `screenshots.json` and work in every style: `slides[].pieces` (lifts), `"layout": "zoom"` with `focus`, and `"layout": "spread"` (docs/configuration.md). The kit places them. Pieces cover their source, stick out past the phone's edge, keep off the caption and the slide's edges, and shrink rather than overlap; `storeshots style` sizes the ones without a `size` from their text. A zoomed phone grows 1.3–1.6× and moves sideways so its focus shows and one corner stays in view. A spread draws the same phone twice, each copy clipped to its slide, the second shifted left by `--gutter` so the halves line up across the store's gap. In a hand-written design, copy the markup `storeshots style` writes for them.
 
 ## Gotchas
 - Images: only via `data-shot` (captures) or paths relative to the design folder. Remote URLs make renders non-deterministic; download assets instead.
@@ -58,3 +62,7 @@ Linux has no SF Pro. Bundle font files in `design/fonts/` (OFL fonts such as Int
 - `filter: blur()` on big images is slow but fine; keep it to one backdrop per slide.
 - Drop shadows on `.device`: use `filter: drop-shadow(...)`, not `box-shadow` (the bezel has transparent corners).
 - After editing only copy or CSS, `storeshots build` is enough; recapture only when the app's screens change.
+
+## Caption font (look.font)
+`look.font` sets every caption in one face, over the style's own: `style` (default), `sf-rounded` and `sf` (Apple's SF Pro, installed per machine with `storeshots fonts --install sf`; Apple's licence covers mock-ups of apps for its platforms, so it is linked from this machine and never copied into a repo), `nunito`, `fredoka` (bundled, OFL), or the app's own font: `{"file": "<path in the app repo>", "family": "Name"}`. Compare them with `storeshots catalog font`. Prefer legible, friendly faces (rounded ones read well at thumbnail size); `storeshots check` fails a font that lacks a character of the copy.
+

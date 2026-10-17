@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "Bloomling",
+    "subtitle": "Good news that grows a flower",
+    "bundleId": "com.bloomling.app",
+    "icon": "design/icon.png",
+    "searchQuery": "self care",
+    "accent": "#f2b441"
+  },
+  "locales": ["en"],
+  "devices": {
+    "iphone-6.9": { "frame": "generic/black" }
+  },
+  "paths": { "raw": "captures" },
+  "shots": {
+    "garden": {}, "fact": {}, "task": {}, "done": {}, "streak": {}, "memories": {}, "settings": {}
+  },
+  "slides": [
+    { "id": "garden", "shot": "fact", "pieces": [{ "box": [82, 860, 1156, 790], "size": 84, "radius": 50 }] },
+    { "id": "task", "shot": "task", "pieces": [{ "box": [140, 1635, 1040, 455], "size": 82, "radius": 40 }] },
+    { "id": "done", "shot": "done" },
+    { "id": "memories", "shot": "memories" },
+    { "id": "buddy", "shot": "settings", "pieces": [{ "box": [138, 1811, 1044, 252], "size": 84, "radius": 53 }] },
+    { "id": "closer", "shot": null, "art": { "asset": "sheep", "place": "closer" } }
+  ],
+  "look": { "style": "atmosphere" }
+}

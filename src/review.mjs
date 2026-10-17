@@ -1,11 +1,16 @@
 // Review images for the agent and the user:
 //   <device>-<locale>-sheet.png   the whole set side by side
-//   <device>-<locale>-search.png  an App Store search result and product page on a
+//   <device>-<locale>-store.html  a simulated App Store (search among competitors, product
+//                                  page, dark mode): open it in a browser
+//   <device>-<locale>-search.png  its search results, and -page.png its product page, on a
 //                                  real-size iPhone screen (the thumbnail test)
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { launchBrowser } from './browser.mjs';
+import { LOCAL_FONTS } from './fonts.mjs';
+import { REFS_DIR, refListing } from './refs.mjs';
+import { storeSimHTML } from './storesim.mjs';
 
 const fileURL = path => pathToFileURL(path).href;
 const escape = text => String(text ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -24,25 +29,6 @@ function stripHTML(files, device) {
   return `<!doctype html><meta charset="utf-8"><body style="margin:0;padding:24px;background:#fff;width:max-content;display:flex;gap:10px;align-items:center;font:600 14px system-ui,sans-serif;color:#8a8a8e">
 ${files.map((f, i) => `<img src="${fileURL(f.path)}" style="display:block;width:${width}px;height:${height}px;border-radius:18px;border:.5px solid rgba(0,0,0,.12)">${i === 2 && files.length > 3 ? '<div style="width:3px;align-self:stretch;background:#ff3b30;border-radius:2px"></div>' : ''}`).join('\n')}
 </body>`;
-}
-
-function searchHTML(files, store, locale) {
-  const pl = locale.startsWith('pl');
-  const icon = store.app.icon && existsSync(resolve(store.dir, store.app.icon)) ? fileURL(resolve(store.dir, store.app.icon)) : '';
-  const thumb = (f, w) => `<img src="${fileURL(f.path)}" style="width:${w}px;aspect-ratio:${store.ratio};border-radius:${w * 0.09}px;border:.5px solid rgba(0,0,0,.12);display:block;flex:none">`;
-  return `<!doctype html><meta charset="utf-8"><body style="margin:0;width:440px;height:956px;overflow:hidden;background:#fff;font-family:system-ui,'Inter',sans-serif;color:#000">
-<div style="padding:64px 20px 0">
-  <div style="font-size:34px;font-weight:700;letter-spacing:-.5px">${pl ? 'Szukaj' : 'Search'}</div>
-  <div style="margin-top:10px;height:38px;border-radius:12px;background:#efeff0;display:flex;align-items:center;padding:0 12px;color:#3c3c43;font-size:17px">🔍&nbsp; ${escape(store.app.searchQuery ?? store.app.name ?? '')}</div>
-  <div style="margin-top:22px;display:flex;align-items:center;gap:12px">
-    ${icon ? `<img src="${icon}" style="width:64px;height:64px;border-radius:15px;border:.5px solid rgba(0,0,0,.1)">` : '<div style="width:64px;height:64px;border-radius:15px;background:#ddd"></div>'}
-    <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:600">${escape(store.app.name)}</div><div style="font-size:13px;color:#8a8a8e;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escape(store.app.subtitle ?? '')}</div><div style="font-size:11px;color:#8a8a8e;margin-top:4px">★★★★★</div></div>
-    <div style="background:#eeeef3;color:#0a7aff;font-weight:700;font-size:15px;padding:6px 18px;border-radius:999px">${pl ? 'Pobierz' : 'Get'}</div>
-  </div>
-  <div style="margin-top:14px;display:flex;gap:8px">${files.slice(0, 3).map(f => thumb(f, (400 - 16) / 3)).join('')}</div>
-  <div style="margin-top:36px;font-size:22px;font-weight:700">${pl ? 'Strona aplikacji' : 'Product page'}</div>
-  <div style="margin-top:12px;display:flex;gap:10px;width:max-content">${files.slice(0, 3).map(f => thumb(f, 232)).join('')}</div>
-</div></body>`;
 }
 
 export async function review(store, { devices, locales, log = console.error }) {
@@ -73,11 +59,31 @@ export async function review(store, { devices, locales, log = console.error }) {
         await sheet.screenshot({ path: sheetFile, fullPage: true });
         await sheet.close();
 
-        const search = await browser.newPage({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3 });
-        await open(search, `${deviceId}-${locale}-search.html`, searchHTML(files, { ...store, ratio: `${device.width} / ${device.height}` }, locale));
-        const searchFile = join(store.paths.review, `${deviceId}-${locale}-search.png`);
-        await search.screenshot({ path: searchFile });
-        await search.close();
+        // The simulated store: the set between the competitors named in review.competitors
+        // (folders of the reference library, e.g. "pl/accuweather-weather-forecast").
+        const competitors = [];
+        for (const ref of store.config.review?.competitors ?? []) {
+          try { const l = await refListing(join(REFS_DIR, ref)); competitors.push({ ...l, icon: l.icon && fileURL(l.icon), shots: l.shots.map(fileURL) }); }
+          catch (e) { log(`! competitor ${ref}: ${e.message}`); }
+        }
+        const icon = store.app.icon && existsSync(resolve(store.dir, store.app.icon)) ? fileURL(resolve(store.dir, store.app.icon)) : null;
+        const listing = { name: store.app.name, subtitle: store.app.subtitle, icon, rating: store.app.rating ?? 4.8, ratings: store.app.ratings ?? 1200, seller: store.app.seller, shots: files.map(f => fileURL(f.path)), description: store.app.subtitle };
+        const sf = existsSync(join(LOCAL_FONTS, 'SF-Pro-Display-Regular.otf')) ? fileURL(LOCAL_FONTS) : null;
+        const sim = view => storeSimHTML({ listing, competitors, locale, query: store.app.searchQuery, view, fontBase: sf });
+        const storeFile = join(store.paths.review, `${deviceId}-${locale}-store.html`);
+        writeFileSync(storeFile, sim('search'));
+        const shots = {};
+        for (const view of ['search', 'page']) {
+          const page = await browser.newPage({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3 });
+          const file = join(store.paths.build, `${deviceId}-${locale}-${view}.html`);
+          writeFileSync(file, sim(view));
+          await page.goto(fileURL(file), { waitUntil: 'load' });
+          await page.evaluate(() => Promise.all([...document.images].map(i => i.decode().catch(() => {}))));
+          shots[view] = join(store.paths.review, `${deviceId}-${locale}-${view}.png`);
+          await page.screenshot({ path: shots[view] });
+          await page.close();
+        }
+        const searchFile = shots.search;
 
         const strip = await browser.newPage({ viewport: { width: 1000, height: 100 }, deviceScaleFactor: 1 });
         await open(strip, `${deviceId}-${locale}-strip.html`, stripHTML(files, device));
@@ -85,8 +91,8 @@ export async function review(store, { devices, locales, log = console.error }) {
         await strip.screenshot({ path: stripFile, fullPage: true });
         await strip.close();
 
-        log(`review ${deviceId}/${locale}:\n  ${sheetFile}\n  ${searchFile}\n  ${stripFile}`);
-        outputs.push({ device: deviceId, locale, sheet: sheetFile, search: searchFile, strip: stripFile });
+        log(`review ${deviceId}/${locale}:\n  ${sheetFile}\n  ${searchFile}\n  ${shots.page}\n  ${stripFile}\n  ${storeFile}`);
+        outputs.push({ device: deviceId, locale, sheet: sheetFile, search: searchFile, page: shots.page, strip: stripFile, store: storeFile });
       }
     }
   } finally {

@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- storeshots {"background": "gradient", "colours": "one", "frame": "plain/white/26", "rhythm": ["hero", "lean", "hero", "offset", "lean", "hero", "offset", "lean", "hero"]} -->
+<!--
+  Style "world" (after Finch, Weatherly, Alto's Odyssey): the app's own world is the ground,
+  its painted landscape, its garden, its space, with the phones standing in it and the app's
+  characters around them. The headline sits on the calm part of the scene (the sky) over a
+  soft scrim in the slide colour, so set the palette to the colour of that sky.
+  The world comes from look.background {asset} (one panorama across the strip) or a
+  backdrop per slide (slides[].art with "place": "backdrop"); without one, a sky gradient of
+  the slide colour stands in. Characters: slides[].art beside or peeking over the phone.
+  For: games, weather, self-care with a character, kids: any app with a world of its own.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Nunito; src: url(fonts/Nunito.ttf); font-weight: 200 1000; }
+  {{TOKENS}}
+  /* A phone big enough to read but lower than in bold, so the world shows above and beside it. */
+  :root { --phone-w: calc(var(--u) * 76); --hero-top: 31%; --offset-top: 35%; --lean: 4deg; --hang-top: -16%;
+    --caption-top: calc(var(--u) * 10); --caption-bottom: calc(var(--u) * 9); }
+  body { background: #fff; font-family: Nunito, sans-serif; }
+  /* No world given: a plain sky of the slide colour, lighter towards the horizon. */
+  .field.gradient { background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 55%, white) 100%); }
+  /* The scrim: the sky colour behind the caption, fading out before the phone. */
+  .slide::before { content: ""; position: absolute; z-index: -1; inset-inline: 0; top: 0; height: 34%; pointer-events: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 78%, transparent) 0%, color-mix(in srgb, var(--bg) 50%, transparent) 55%, transparent 100%); }
+  .slide.c-hang::before, .slide.zoom-low::before { top: auto; bottom: 0; height: 36%; background: linear-gradient(0deg, color-mix(in srgb, var(--bg) 82%, transparent) 0%, color-mix(in srgb, var(--bg) 55%, transparent) 55%, transparent 100%); }
+  .slide.c-closer::after { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none;
+    background: radial-gradient(70% 40% at 50% 62%, color-mix(in srgb, var(--bg) 70%, transparent), transparent); }
+  .caption { text-align: center; color: var(--fg); inset-inline: calc(var(--u) * 7); }
+  h1 { margin: 0; font-weight: 900; font-size: calc(var(--u) * 11); line-height: 1.02; letter-spacing: -.015em; text-wrap: balance;
+    text-shadow: 0 calc(var(--u) * .3) calc(var(--u) * 3) color-mix(in srgb, var(--bg) 70%, transparent); }
+  /* Its own box with air above it, so it never covers the descenders of the line above. */
+  h1 em { display: inline-block; font-style: normal; color: var(--pill-fg); background: var(--pill-bg); line-height: 1.04; padding: .02em .14em .07em; margin-top: .12em; border-radius: .22em; text-shadow: none; }
+  p { margin: calc(var(--u) * 2.4) auto 0; max-width: 92%; font-weight: 700; font-size: calc(var(--u) * 5); line-height: 1.2; color: var(--fg); text-wrap: balance;
+    text-shadow: 0 0 calc(var(--u) * 2.5) color-mix(in srgb, var(--bg) 80%, transparent); }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 7) rgba(0, 0, 0, .3)); }
+  .pop { --pop-rim: #fff; --pop-rim-width: 8; --pop-radius: calc(var(--u) * 3); --pop-shadow: 0 0 0 calc(var(--u) * .8) #fff, 0 calc(var(--u) * 3) calc(var(--u) * 9) rgba(0, 0, 0, .28); }
+  /* Characters stand in front of the phone, on the ground of the world. */
+  .art { z-index: 2; filter: drop-shadow(0 calc(var(--u) * 1.5) calc(var(--u) * 2.5) rgba(0, 0, 0, .25)); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1.4) #fff, 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, .3); }
+  .c-closer .closer-icon.closer-art { box-shadow: none; filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .25)); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

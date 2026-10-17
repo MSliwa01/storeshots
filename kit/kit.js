@@ -8,6 +8,7 @@
         copy/<locale>.json value; *word* → <em>, \n → line break; shrinks until it
         fits its width, data-lines and (if set) its CSS max-height
     <div class="device" data-shot="upcoming" [data-frame="iphone-18-pro-max/silver"]>
+        (data-behind on a text: it is meant to sit behind a phone; check skips its hidden letters)
         <div class="pop" data-crop="x y w h" [data-radius="43"]>   pop-out, see below
         capture inside the Apple bezel (width from CSS, height from the bezel)
     <div class="screen" data-shot="upcoming">       capture alone, device aspect ratio
@@ -15,6 +16,7 @@
     <div class="zoom" data-shot="upcoming" data-crop="x y w h">
         crop of the capture in capture pixels, scaled to the element's width
     <img data-app-icon>, <span data-app-name>        from screenshots.json "app"
+    <img data-asset="mascot-wave">                   the app's own art by id (store/assets.json)
   Hooks: window.beforeFit / window.afterFit (async) for design-specific layout.
 */
 (() => {
@@ -23,7 +25,7 @@
   const problems = [];
   const lookup = (object, path) => path.split('.').reduce((o, key) => o?.[key], object);
   const escape = text => text.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  const rich = text => escape(text).replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+  const rich = text => escape(typeof typeset === 'function' ? typeset(text, S.locale) : text).replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
   const slideOf = el => el.closest('.slide')?.id || null;
 
   function shotURL(el) {
@@ -40,6 +42,12 @@
     }
     for (const el of document.querySelectorAll('[data-app-name]')) el.textContent = S.app.name ?? '';
     for (const el of document.querySelectorAll('img[data-app-icon]')) el.src = S.app.icon ?? '';
+    // The app's own art, by id from store/assets.json (Rive poses are rendered to PNG first).
+    for (const el of document.querySelectorAll('[data-asset]')) {
+      const url = S.assets?.[el.dataset.asset];
+      if (!url) { problems.push({ type: 'missing-asset', asset: el.dataset.asset, slide: slideOf(el) }); continue; }
+      if (el.tagName === 'IMG') el.src = url; else el.style.backgroundImage = `url("${url}")`;
+    }
 
     for (const el of document.querySelectorAll('.device[data-shot]')) {
       const frame = S.frames[el.dataset.frame || S.defaultFrame];
@@ -192,6 +200,91 @@
     return [Number(m[1]), Number(m[2]), Number(m[3])];
   }
 
+  // Every visible character's box, relative to its slide: what `check` uses to find letters
+  // hidden behind a phone, texts running into each other and text too close to an edge.
+  function letterBoxes(el, frame) {
+    const boxes = [], range = document.createRange(), walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node && boxes.length < 400; node = walker.nextNode()) {
+      for (let i = 0, n; i < node.data.length; i += n) {
+        const c = String.fromCodePoint(node.data.codePointAt(i));
+        n = c.length;
+        if (/\s/.test(c)) continue;
+        range.setStart(node, i); range.setEnd(node, i + n);
+        const r = range.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        boxes.push({ c, x: Math.round(r.left - frame.left), y: Math.round(r.top - frame.top), width: Math.round(r.width), height: Math.round(r.height) });
+      }
+    }
+    return boxes;
+  }
+
+  // Share of the text's letters drawn on top of a phone (over the app's own UI).
+  function overPhone(el) {
+    const range = document.createRange(), walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let all = 0, over = 0;
+    const style = document.createElement('style');
+    style.textContent = '* { pointer-events: auto !important; }';
+    document.head.append(style);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (let i = 0; i < node.data.length; i++) {
+        if (/\s/.test(node.data[i])) continue;
+        range.setStart(node, i); range.setEnd(node, i + 1);
+        const r = range.getBoundingClientRect();
+        if (r.width < 1) continue;
+        const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const self = stack.findIndex(e => el.contains(e)), phone = stack.findIndex(e => e.classList.contains('device') && !e.contains(el));
+        all++;
+        if (self >= 0 && phone > self) over++;
+      }
+    }
+    style.remove();
+    return all ? Math.round((over / all) * 100) / 100 : 0;
+  }
+
+  // Characters the design's own fonts don't have (they would fall back to a system font, or
+  // to a box), and fonts that never loaded. A character is in the stack when it measures the
+  // same with two different fallbacks behind it.
+  const GENERIC = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[a-z-]+|-apple-system|blinkmacsystemfont|emoji|math|fangsong)$/i;
+  const measure = document.createElement('canvas').getContext('2d');
+  function glyphReport(el) {
+    const missing = new Set(), fontsMissing = new Set(), walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const cs = getComputedStyle(node.parentElement);
+      const families = cs.fontFamily.split(',').map(f => f.trim()).filter(f => !GENERIC.test(f.replace(/["']/g, '')));
+      if (!families.length) continue;
+      const font = fallback => `${cs.fontStyle} ${cs.fontWeight} 100px ${families.join(', ')}, ${fallback}`;
+      const differs = text => ['serif', 'sans-serif'].some(f => { measure.font = font('monospace'); const a = measure.measureText(text).width; measure.font = font(f); return Math.abs(a - measure.measureText(text).width) > 0.01; });
+      if (differs('abcdefghijklmnopqrstuvwxyz0123456789')) { fontsMissing.add(families[0].replace(/["']/g, '')); continue; }
+      for (const c of new Set(node.data.replace(/[\s\u200b-\u200d\u2060\ufe0f]/g, ''))) {
+        if (/\p{Extended_Pictographic}/u.test(c)) continue;
+        if (differs(c)) missing.add(c);
+      }
+    }
+    return { missingGlyphs: [...missing].join(''), fontsMissing: [...fontsMissing] };
+  }
+
+  // The ink of a text's letters outside `skip`: each glyph's own ascent and descent around its
+  // baseline (a range's box is the whole line's height, descender room included).
+  function inkBoxes(el, skip) {
+    const out = [], range = document.createRange(), walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (skip?.contains(node)) continue;
+      const cs = getComputedStyle(node.parentElement);
+      measure.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      for (let i = 0, n; i < node.data.length; i += n) {
+        const c = String.fromCodePoint(node.data.codePointAt(i));
+        n = c.length;
+        if (/\s/.test(c)) continue;
+        range.setStart(node, i); range.setEnd(node, i + n);
+        const r = range.getBoundingClientRect();
+        if (r.width < 1) continue;
+        const m = measure.measureText(c), base = r.top + m.fontBoundingBoxAscent;
+        out.push({ c, left: r.left, right: r.right, top: base - m.actualBoundingBoxAscent, bottom: base + m.actualBoundingBoxDescent });
+      }
+    }
+    return out;
+  }
+
   function fit() {
     const texts = [];
     for (const el of document.querySelectorAll('[data-text]')) {
@@ -205,14 +298,22 @@
           el.style.fontSize = `${size}px`;
         }
       }
+      // Gradient-filled text (background-clip: text) is marked so the renderer can remove it
+      // in the pass that measures what is behind the text.
+      for (const x of [el, ...el.querySelectorAll('*')]) { const cs = getComputedStyle(x); if (cs.backgroundClip === 'text' || cs.webkitBackgroundClip === 'text') x.dataset.clipText = ''; }
       const slide = el.closest('.slide'), box = el.getBoundingClientRect(), frame = slide?.getBoundingClientRect();
       texts.push({
         key: el.dataset.text, slide: slide?.id ?? null, role: el.dataset.role ?? 'text',
-        startSize: start, fontSize: parseFloat(getComputedStyle(el).fontSize), lines: lineCount(el),
+        startSize: start, fontSize: parseFloat(getComputedStyle(el).fontSize), lines: lineCount(el), maxLines,
+        statement: !!el.closest('.caption.huge'),
         overflow: overflows(el, maxLines),
         outsideSlide: frame ? box.left < frame.left - 1 || box.right > frame.right + 1 || box.top < frame.top - 1 || box.bottom > frame.bottom + 1 : false,
         box: frame ? { x: Math.round(box.left - frame.left), y: Math.round(box.top - frame.top), width: Math.round(box.width), height: Math.round(box.height) } : null,
         color: textColour(el),
+        text: el.textContent, behind: el.hasAttribute('data-behind'), inDevice: !!el.closest('.device'),
+        letters: frame ? letterBoxes(el, frame) : [],
+        overPhone: frame ? overPhone(el) : 0,
+        ...glyphReport(el),
       });
       // Accent words (pills, colour accents) are measured on their own.
       // Measured unrotated and inside its padding: a tilted pill's bounding box takes in
@@ -226,6 +327,13 @@
         const b = { left: r.left + pad('Left'), top: r.top + pad('Top'), width: r.width - pad('Left') - pad('Right'), height: r.height - pad('Top') - pad('Bottom') };
         const full = em.getBoundingClientRect();
         if (!frame || b.width < 2) continue;
+        // A pill (an accent with its own background) painted over the headline's other letters:
+        // inline, it covers the descenders of the line above.
+        if (cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.backgroundImage !== 'none') {
+          const hit = inkBoxes(el, em).filter(g => g.left < r.right - 1 && g.right > r.left + 1 && g.top < r.bottom - 1 && g.bottom > r.top + 1);
+          if (hit.length) problems.push({ type: 'pill-covers-letters', slide: slide?.id ?? null, key: el.dataset.text, letters: hit.map(g => g.c).join(''),
+            by: Math.round(Math.max(...hit.map(g => Math.min(g.bottom, r.bottom) - Math.max(g.top, r.top)))) });
+        }
         texts.push({ key: `${el.dataset.text}#em`, slide: slide?.id ?? null, role: 'accent', fontSize: parseFloat(getComputedStyle(em).fontSize), lines: 1, overflow: false, outsideSlide: false,
           box: { x: Math.round(b.left - frame.left), y: Math.round(b.top - frame.top), width: Math.round(b.width), height: Math.round(b.height) },
           // What the headline's own measurement skips: the whole pill as drawn.
@@ -326,6 +434,52 @@
       }
       if (sum / (data.length / 4) > 0.3) { field.classList.add('on-light'); slide.classList.add('on-light'); }
     });
+  }
+
+  // Zoom: the phone enlarged 1.3–1.6× (as top sets do; more reads as a cropped screenshot) and
+  // moved sideways so its focus (data-focus, capture px) stays in view while one corner and
+  // the two frame edges meeting there stay too, with background beside them: on the focus's
+  // side, 12 % of the slide wide when the focus allows. The caption stays clear of the phone:
+  // on top when the focus sits high on the screen (the phone then starts under the caption and
+  // runs off the bottom), at the bottom when it sits low (the phone hangs from above the
+  // slide). Whichever side allows the larger phone wins.
+  const ZOOM = [1.3, 1.6], ZOOM_SIDE = 0.12;
+  function zoomDevices() {
+    const slides = [...document.querySelectorAll('.slide')], strip = document.querySelector('.strip')?.getBoundingClientRect();
+    const slideW = slides[0]?.getBoundingClientRect().width;
+    if (!slideW || !strip) return;
+    const slideH = strip.height, gap = slideW * 0.05;
+    for (const el of document.querySelectorAll('.device.d-zoom[data-focus]')) {
+      const i = Number(el.style.getPropertyValue('--i')), slide = slides[i], caption = slide?.querySelector('.caption'), screen = el.querySelector('.device-screen');
+      const [x, y, w, h] = el.dataset.focus.split(/[\s,]+/).map(Number);
+      if (!caption || !screen || ![x, y, w, h].every(Number.isFinite)) { problems.push({ type: 'bad-focus', focus: el.dataset.focus, slide: slide?.id ?? null }); continue; }
+      // Device-local, unscaled: the focus box and the phone's height.
+      const D = el.offsetWidth, DH = el.offsetHeight, sx = screen.offsetWidth / S.device.width, sy = screen.offsetHeight / S.device.height;
+      const fl = screen.offsetLeft + x * sx, fw = w * sx, ft = screen.offsetTop + y * sy, fb = ft + h * sy;
+      // The kept side: the one the focus leans to; the focus must fit between that side's
+      // background strip and the far edge (4 % margin).
+      const keepLeft = el.dataset.side ? el.dataset.side === 'left' : fl + fw / 2 <= D / 2;
+      const reach = keepLeft ? fl + fw : D - fl, fits = (slideW * (0.96 - ZOOM_SIDE)) / reach;
+      const room = bottom => { caption.classList.toggle('bottom', bottom); const c = caption.getBoundingClientRect(); return bottom ? c.top - strip.top - gap : c.bottom - strip.top + gap; };
+      const want = Math.min(ZOOM[1], Math.max(ZOOM[0], (slideW * 0.84) / fw), fits), edge = slideH * 0.03;
+      const top = room(false), kTop = Math.min(want, (slideH - edge - top) / fb);
+      const bottom = room(true), kBottom = Math.min(want, (bottom - edge) / (DH - ft));
+      const below = kBottom > kTop * 1.05, k = Math.max(1, below ? kBottom : kTop);
+      room(below);
+      slide.classList.toggle('zoom-low', below);
+      slide.classList.toggle('zoom-right', !keepLeft);
+      if (k < 1.2) problems.push({ type: 'zoom-too-small', slide: slide.id, scale: Math.round(k * 100) / 100, warn: true });
+      // The phone starts right under the caption (or ends right above it); spare room shows
+      // more of the screen past the focus.
+      const devTop = below ? bottom - DH * k : top, x0 = i * slideW;
+      const devLeft = keepLeft
+        ? Math.min(x0 + slideW * ZOOM_SIDE, x0 + slideW * 0.96 - (fl + fw) * k)
+        : Math.max(x0 + slideW * (1 - ZOOM_SIDE) - D * k, x0 + slideW * 0.04 - fl * k);
+      Object.assign(el.style, { width: `${D * k}px`, left: `${devLeft}px`, top: `${devTop}px` });
+      // Cut by its own slide: nothing of it shows on the neighbours.
+      const cutL = Math.max(0, x0 - devLeft), cutR = Math.max(0, devLeft + D * k - (x0 + slideW));
+      el.style.clipPath = `inset(-${slideH}px ${cutR}px -${slideH}px ${cutL}px)`;
+    }
   }
 
   // A 3D phone is as wide as its projection: shrink it (and centre it) until it fits its
@@ -464,6 +618,284 @@
     }
   }
 
+  // Pieces (cut-outs) follow the rules from the design reviews: whole objects, enlarged over
+  // their own source (never a second copy beside it), sticking out past the phone's edge,
+  // never on top of each other, never near a slide edge or over the caption.
+  // Without a spot of their own (data-over): a narrow piece (up to 56 % of the slide) keeps
+  // its source covered and reaches out past the phone's edge on its source's side by a
+  // quarter of its width, tilted outwards (data-tilt); a wide one is centred on its source.
+  // Then each piece is kept inside its slide's free band, and pieces that touch shrink (the
+  // larger first, never below 1.15× their source) until they don't.
+  const PIECE_MARGIN = 0.04; // of the slide's width
+  const pieceSlide = el => Number(el.style.getPropertyValue('--i'));
+  function placePieces() {
+    const slides = [...document.querySelectorAll('.slide')], strip = document.querySelector('.strip')?.getBoundingClientRect();
+    const slideW = slides[0]?.getBoundingClientRect().width;
+    if (!slideW || !strip) return;
+    const slideH = strip.height, m = slideW * PIECE_MARGIN, groups = new Map();
+    for (const el of document.querySelectorAll('.piece')) groups.set(pieceSlide(el), [...(groups.get(pieceSlide(el)) ?? []), el]);
+    for (const [i, pieces] of groups) {
+      const x0 = i * slideW, slide = slides[i], cap = slide?.querySelector('.caption')?.getBoundingClientRect(), capBottom = !!slide?.querySelector('.caption.bottom');
+      const band = [capBottom || !cap ? m : cap.bottom - strip.top + m, capBottom && cap ? cap.top - strip.top - m : slideH - m];
+      const device = [...document.querySelectorAll('.device:not(.d-fan)')].find(d => Number(d.style.getPropertyValue('--i')) === i);
+      const dr = device?.getBoundingClientRect(), source = new Map();
+      // The piece's centre for its current width.
+      const place = el => {
+        const s = source.get(el);
+        if (!s) return;
+        const pw = el.offsetWidth;
+        let cx = s.cx;
+        if (pw <= slideW * 0.56 && dr) {
+          const phoneL = dr.left - strip.left, phoneR = dr.right - strip.left, middle = (phoneL + phoneR) / 2;
+          const side = el.dataset.side || (s.cx < middle ? 'left' : 'right');
+          if (side === 'right') cx = Math.min(s.l + pw, Math.max(s.r, phoneR + pw * 0.25)) - pw / 2;
+          else cx = Math.max(s.r - pw, Math.min(s.l, phoneL - pw * 0.25)) + pw / 2;
+          if (el.hasAttribute('data-tilt')) el.style.rotate = `${side === 'left' ? -3 : 3}deg`;
+        }
+        el.style.left = `${cx + (Number(el.dataset.shift) || 0) * slideW / 100}px`;
+        el.style.top = `${s.cy}px`;
+      };
+      for (const el of pieces) {
+        if (el.offsetWidth > slideW - 2 * m) el.style.width = `${slideW - 2 * m}px`;
+        if (!el.hasAttribute('data-over')) continue;
+        const zoom = el.querySelector('.zoom'), screen = (device?.dataset.shot === zoom.dataset.shot ? device : null)?.querySelector('.device-screen');
+        if (!screen) continue;
+        const [x, y, w, h] = zoom.dataset.crop.split(/[\s,]+/).map(Number), r = screen.getBoundingClientRect();
+        const l = r.left - strip.left + (r.width * x) / S.device.width, rr = r.left - strip.left + (r.width * (x + w)) / S.device.width;
+        source.set(el, { l, r: rr, cx: (l + rr) / 2, cy: r.top - strip.top + (r.height * (y + h / 2)) / S.device.height, w: rr - l });
+        place(el);
+      }
+      // Inside the margins and the free band (on the drawn, tilted box).
+      const box = el => { const b = el.getBoundingClientRect(); return { l: b.left - strip.left, r: b.right - strip.left, t: b.top - strip.top, b: b.bottom - strip.top }; };
+      const keepIn = el => {
+        const b = box(el), dx = Math.max(0, x0 + m - b.l) - Math.max(0, b.r - (x0 + slideW - m)), dy = Math.max(0, band[0] - b.t) - Math.max(0, b.b - band[1]);
+        el.style.left = `${(parseFloat(el.style.left) || el.offsetLeft) + dx}px`;
+        el.style.top = `${(parseFloat(el.style.top) || el.offsetTop) + dy}px`;
+      };
+      pieces.forEach(keepIn);
+      for (let pass = 0; pass < 12; pass++) {
+        const hit = pieces.flatMap((a, k) => pieces.slice(k + 1).map(c => [a, c])).find(([a, c]) => {
+          const p = box(a), q = box(c);
+          return !(p.l >= q.r + m / 2 || q.l >= p.r + m / 2 || p.t >= q.b + m / 2 || q.t >= p.b + m / 2);
+        });
+        if (!hit) break;
+        const big = hit.sort((a, c) => c.offsetWidth - a.offsetWidth).find(el => el.offsetWidth * 0.92 >= (source.get(el)?.w ?? 0) * 1.15);
+        if (!big) break;
+        big.style.width = `${big.offsetWidth * 0.92}px`;
+        place(big); keepIn(big);
+      }
+    }
+  }
+
+  // A character peeking over a phone's top edge needs room under the caption: styles set the
+  // phone's top as a share of the slide, not by the caption's real height. The phone (and the
+  // character) move down until the peeking part clears the caption.
+  function roomForPeeks() {
+    let moved = false;
+    for (const art of document.querySelectorAll('.art.a-peek:not(.at-hang)')) {
+      const i = Number(art.style.getPropertyValue('--i')), slide = document.querySelectorAll('.slide')[i];
+      const cap = slide?.querySelector('.caption:not(.bottom)');
+      const device = [...document.querySelectorAll('.device')].find(d => Number(d.style.getPropertyValue('--i')) === i);
+      if (!cap || !device) continue;
+      const dy = cap.getBoundingClientRect().bottom + slide.getBoundingClientRect().width * 0.03 - art.getBoundingClientRect().top;
+      if (dy <= 0) continue;
+      device.style.top = `${device.offsetTop + dy}px`;
+      art.style.bottom = `${parseFloat(getComputedStyle(art).bottom) - dy}px`;
+      moved = true;
+    }
+    if (moved) placePieces();
+  }
+
+  // The rules, measured where they can be: per slide at most two pieces, none on another or
+  // near an edge, and none cut through the middle of something (busy capture on both sides of
+  // a crop edge: the rest of a row, a picture, a paragraph).
+  async function pieceProblems(slides) {
+    const strip = document.querySelector('.strip')?.getBoundingClientRect(), slideW = document.querySelector('.slide')?.getBoundingClientRect().width;
+    if (!strip || !slideW) return;
+    const all = [...document.querySelectorAll('.piece')], images = new Map();
+    const id = el => slides[pieceSlide(el)]?.id ?? null;
+    for (const i of new Set(all.map(pieceSlide))) {
+      const pieces = all.filter(el => pieceSlide(el) === i);
+      if (pieces.length > 2) problems.push({ type: 'too-many-pieces', slide: id(pieces[0]), count: pieces.length, warn: true });
+      for (const [k, a] of pieces.entries()) for (const c of pieces.slice(k + 1)) {
+        const p = a.getBoundingClientRect(), q = c.getBoundingClientRect();
+        const ix = Math.min(p.right, q.right) - Math.max(p.left, q.left), iy = Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top);
+        if (ix > 2 && iy > 2) problems.push({ type: 'pieces-overlap', slide: id(a), by: [Math.round(ix), Math.round(iy)] });
+      }
+      // Text big enough to read: cap height of the biggest line ≥ 3 % of the slide's width,
+      // of every line ≥ 2 % (what top sets do; below that a lift reads as texture in search).
+      for (const el of pieces) {
+        const zoom = el.querySelector('.zoom'), w = Number(zoom.dataset.crop.split(/[\s,]+/)[2]), k = zoom.offsetWidth / w / slideW * 100;
+        const key = Number(el.dataset.key) * k, min = Number(el.dataset.min) * k, words = Number(el.dataset.words);
+        if (key && (key < 3 || min < 2)) problems.push({ type: 'piece-text-small', slide: id(el), crop: zoom.dataset.crop.split(/[\s,]+/).map(Number), key: Math.round(key * 10) / 10, min: Math.round(min * 10) / 10, warn: true });
+        if (words > 15) problems.push({ type: 'piece-wordy', slide: id(el), words, warn: true });
+      }
+      for (const el of pieces) {
+        const b = el.getBoundingClientRect(), x0 = strip.left + i * slideW, near = Math.min(b.left - x0, x0 + slideW - b.right, b.top - strip.top, strip.bottom - b.bottom);
+        if (near < slideW * 0.03) problems.push({ type: 'piece-near-edge', slide: id(el), by: Math.round(slideW * 0.03 - near), warn: true });
+      }
+    }
+    for (const el of all) {
+      const zoom = el.querySelector('.zoom'), url = S.shots[zoom.dataset.shot];
+      if (!url) continue;
+      if (!images.has(url)) { const img = new Image(); img.src = url; images.set(url, img.decode().then(() => img).catch(() => null)); }
+      const img = await images.get(url);
+      if (!img) continue;
+      const [x, y, w, h] = zoom.dataset.crop.split(/[\s,]+/).map(Number), W = img.naturalWidth, H = img.naturalHeight, d = 4;
+      // Steps along one line of capture pixels: text, icons and pictures make many, a gradient
+      // or a lone divider few. Off the capture (the screen's own edge) counts as calm.
+      const busy = (sx, sy, sw, sh) => {
+        if (sx < 0 || sy < 0 || sx + sw > W || sy + sh > H) return false;
+        const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        let px;
+        try { px = ctx.getImageData(0, 0, sw, sh).data; } catch { return false; }
+        let steps = 0;
+        for (let k = 4; k < px.length; k += 4) if (Math.max(Math.abs(px[k] - px[k - 4]), Math.abs(px[k + 1] - px[k - 3]), Math.abs(px[k + 2] - px[k - 2])) > 24) steps++;
+        return steps > Math.max(8, (sw + sh) * 0.01);
+      };
+      // A side cuts through when the capture is busy 4 px outside it and 4 px inside it: a card
+      // cropped along its own edge has calm padding inside, even over a busy picture.
+      const lines = {
+        top: [[x, y - d, w, 1], [x, y + d, w, 1]], bottom: [[x, y + h + d, w, 1], [x, y + h - d, w, 1]],
+        left: [[x - d, y, 1, h], [x + d, y, 1, h]], right: [[x + w + d, y, 1, h], [x + w - d, y, 1, h]],
+      };
+      const cut = Object.entries(lines).filter(([, [outside, inside]]) => busy(...outside) && busy(...inside)).map(([side]) => side);
+      if (cut.length) problems.push({ type: 'piece-cuts-through', slide: id(el), crop: [x, y, w, h], sides: cut });
+      // Cropped a little wide, a card carries a strip of the screen beside it: a straight step in
+      // colour along most of a side, 5 to 24 px (at most 4 % of the crop) inside it, with the
+      // screen's own colour (as just outside the crop) beyond the step. A card's rim or shadow
+      // differs from it; a wider band of the screen round a tile is a frame chosen on purpose.
+      const m = 8, rx = Math.max(0, x - m), ry = Math.max(0, y - m), rw = Math.min(W, x + w + m) - rx, rh = Math.min(H, y + h + m) - ry;
+      if (w < 20 || h < 20 || rw < 1 || rh < 1) continue;
+      const c = document.createElement('canvas'); c.width = rw; c.height = rh;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, rx, ry, rw, rh, 0, 0, rw, rh);
+      let px;
+      try { px = ctx.getImageData(0, 0, rw, rh).data; } catch { continue; }
+      // Capture px → index, or -1 off the region read.
+      const at = (cx, cy) => (cx < rx || cy < ry || cx >= rx + rw || cy >= ry + rh ? -1 : ((cy - ry) * rw + cx - rx) * 4);
+      const differ = (a, b, by) => a >= 0 && b >= 0 && Math.max(Math.abs(px[a] - px[b]), Math.abs(px[a + 1] - px[b + 1]), Math.abs(px[a + 2] - px[b + 2])) > by;
+      const alike = (a, b) => a >= 0 && b >= 0 && !differ(a, b, 24);
+      // A point at depth d from a side (negative: outside the crop), t along it.
+      const point = (side, d, t) => (side === 'left' ? at(x + d, y + t) : side === 'right' ? at(x + w - 1 - d, y + t) : side === 'top' ? at(x + t, y + d) : at(x + t, y + h - 1 - d));
+      for (const side of ['left', 'right', 'top', 'bottom']) {
+        const along = side === 'left' || side === 'right' ? h : w, across = side === 'left' || side === 'right' ? w : h, deepest = Math.min(24, Math.round(across * 0.04));
+        for (let d = 5; d <= deepest; d++) {
+          let n = 0, steps = 0, screen = 0;
+          for (let t = 0; t < along; t += 2, n++) {
+            if (differ(point(side, d - 1, t), point(side, d, t), 30)) steps++;
+            if (alike(point(side, Math.floor(d / 2), t), point(side, -3, t))) screen++;
+          }
+          if (steps / n < 0.6) continue;
+          if (screen / n >= 0.6) problems.push({ type: 'piece-sliver', slide: id(el), crop: [x, y, w, h], side, by: d, warn: true });
+          break;
+        }
+      }
+    }
+  }
+
+  // Words on a phone's screen (OCR, S.words) that a slide's left or right edge cuts ("dziś" left
+  // as "iś"), or that a card, a pop-out or art in front covers in part or touches (the "Kolejne
+  // wywozy" heading under a lifted card). A word covered whole is hidden, which is fine, and a
+  // pop-out's own spot is covered on purpose. Markers placed on the screen in capture px give
+  // each word's place on the slide through every tilt and 3D pose.
+  function screenProblems(slides) {
+    const slideBox = document.querySelector('.slide')?.getBoundingClientRect();
+    if (!slideBox || !S.words) return;
+    const W = slideBox.width, pad = W * 0.004, found = new Set();
+    const add = (type, slide, text, by) => {
+      const key = `${type}\n${slide}\n${text}\n${by ?? ''}`;
+      if (found.has(key)) return;
+      found.add(key);
+      problems.push({ type, slide, text, ...(by && { by }), warn: true });
+    };
+    // In front of the phones: pieces, pop-outs and art above the phone's layer (z-index 1).
+    const covers = [...document.querySelectorAll('.piece, .device > .pop, .art')].filter(c => c.classList.contains('pop') || Number(getComputedStyle(c).zIndex) > 1);
+    const alphas = new Map();
+    const alphaOf = c => {
+      if (c.tagName !== 'IMG' || !c.naturalWidth) return null;
+      if (!alphas.has(c)) {
+        const k = Math.min(1, 256 / Math.max(c.naturalWidth, c.naturalHeight)), cw = Math.max(1, Math.round(c.naturalWidth * k)), ch = Math.max(1, Math.round(c.naturalHeight * k));
+        const canvas = document.createElement('canvas'); canvas.width = cw; canvas.height = ch;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(c, 0, 0, cw, ch);
+        let data = null;
+        try { data = ctx.getImageData(0, 0, cw, ch).data; } catch { /* a file the canvas may not read */ }
+        alphas.set(c, data && { data, cw, ch, mirror: /^-1/.test(getComputedStyle(c).scale) });
+      }
+      return alphas.get(c);
+    };
+    // Share of a box (8 × 4 points) that a cover hides: its box for cards, its opaque pixels for art.
+    const share = (c, r) => {
+      const b = c.getBoundingClientRect(), a = c.classList.contains('art') ? alphaOf(c) : null;
+      let hit = 0;
+      for (let gy = 0; gy < 4; gy++) for (let gx = 0; gx < 8; gx++) {
+        const x = r.left + ((gx + 0.5) / 8) * r.width, y = r.top + ((gy + 0.5) / 4) * r.height;
+        if (x < b.left || x > b.right || y < b.top || y > b.bottom) continue;
+        if (!a) { hit++; continue; }
+        let fx = (x - b.left) / b.width;
+        if (a.mirror) fx = 1 - fx;
+        const px = Math.min(a.cw - 1, Math.floor(fx * a.cw)), py = Math.min(a.ch - 1, Math.floor(((y - b.top) / b.height) * a.ch));
+        if (a.data[(py * a.cw + px) * 4 + 3] >= 128) hit++;
+      }
+      return hit / 32;
+    };
+    const kind = c => (c.classList.contains('piece') ? 'card' : c.classList.contains('pop') ? 'pop-out' : `art "${c.dataset.asset ?? ''}"`);
+    for (const device of document.querySelectorAll('.device[data-shot]')) {
+      const screen = device.querySelector('.device-screen'), list = S.words[device.dataset.shot];
+      if (!screen || !list?.length) continue;
+      const own = [...device.querySelectorAll(':scope > .pop')].map(p => (p.dataset.crop ?? '').trim().split(/[\s,]+/).map(Number));
+      const marks = list.map(([x, y, w, h, text]) => {
+        const m = document.createElement('i');
+        Object.assign(m.style, { position: 'absolute', left: `${(x / S.device.width) * 100}%`, top: `${(y / S.device.height) * 100}%`, width: `${(w / S.device.width) * 100}%`, height: `${(h / S.device.height) * 100}%` });
+        screen.append(m);
+        return { m, text, box: [x, y, w, h] };
+      });
+      const rects = marks.map(({ m }) => m.getBoundingClientRect());
+      marks.forEach(({ m }) => m.remove());
+      // The slide the phone shows on: its spread half's, else its own (else where its middle is).
+      const given = (device.closest('.spread-half') ?? device).style.getPropertyValue('--i').trim(), box = device.getBoundingClientRect();
+      const i = given ? Number(given) : Math.floor((box.left + box.width / 2) / W), slide = slides[i]?.id ?? null;
+      const x0 = i * W, x1 = (i + 1) * W, onSlide = covers.filter(c => (c.classList.contains('pop') ? c.parentElement === device : Number(c.style.getPropertyValue('--i')) === i));
+      for (const [k, { text, box: [x, y, w, h] }] of marks.entries()) {
+        const r = rects[k];
+        if (r.bottom < slideBox.top || r.top > slideBox.bottom || r.width < 1 || r.right < x0 || r.left > x1) continue;
+        if (own.some(([px, py, pw, ph]) => x >= px - 8 && y >= py - 8 && x + w <= px + pw + 8 && y + h <= py + ph + 8)) continue;
+        if ([x0, x1].some(edge => r.left < edge - 2 && r.right > edge + 2)) add('screen-text-cut', slide, text);
+        // What shows of the word on its slide, and a little round it (touching counts).
+        const left = Math.max(r.left, x0), right = Math.min(r.right, x1), seen = { left, right, top: r.top, bottom: r.bottom, width: right - left, height: r.height };
+        const grown = { left: left - pad, right: right + pad, top: r.top - pad, bottom: r.bottom + pad, width: right - left + 2 * pad, height: r.height + 2 * pad };
+        for (const c of onSlide) if (share(c, grown) > 0 && share(c, seen) < 0.9) add('cover-hides-text', slide, text, kind(c));
+      }
+    }
+  }
+
+  // The sides of a cut-out where its subject runs into the picture's border (a run of opaque
+  // pixels along 2 % of it or more): where its photo was cropped. Trimmed art keeps a clear
+  // margin round a whole subject, so even a short run means a cut (a bin's side cropped for 9 %
+  // of the picture's height still shows as a straight line). A picture opaque all round (a
+  // photo, a card) is a rectangle, not a cut-out.
+  function flatSides(img) {
+    if (img.tagName !== 'IMG' || !img.naturalWidth) return [];
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const run = (sx, sy, sw, sh) => {
+      const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      let px;
+      try { px = ctx.getImageData(0, 0, sw, sh).data; } catch { return 0; }
+      let best = 0, now = 0;
+      for (let k = 3; k < px.length; k += 4) { now = px[k] >= 128 ? now + 1 : 0; best = Math.max(best, now); }
+      return best / (sw * sh);
+    };
+    const share = { top: run(0, 0, W, 1), bottom: run(0, H - 1, W, 1), left: run(0, 0, 1, H), right: run(W - 1, 0, 1, H) };
+    const flat = Object.keys(share).filter(side => share[side] >= 0.02);
+    if (flat.length === 4) return [];
+    return /^-1/.test(getComputedStyle(img).scale) ? flat.map(side => ({ left: 'right', right: 'left' })[side] ?? side) : flat;
+  }
+
   window.__kit = (async () => {
     fill();
     await document.fonts.ready;
@@ -471,18 +903,23 @@
       problems.push({ type: 'image-failed', src: decodeURIComponent(img.src).slice(-160), slide: slideOf(img) });
     })));
     toneGlows();
+    zoomDevices();
     matteSurfaces();
     fitDevices();
     centrePops();
     evenOnScreen();
     keepPopsInside();
+    placePieces();
     if (window.beforeFit) await window.beforeFit(S);
     const texts = fit();
+    roomForPeeks();
     if (window.afterFit) await window.afterFit(S);
     const slides = [...document.querySelectorAll('.slide')].map((el, i) => ({ id: el.id || `slide-${i + 1}` }));
+    await pieceProblems(slides);
+    screenProblems(slides);
     // Phone geometry for `check`: its own size (before any pose) and where it sits in its slide.
     const slideBox = document.querySelector('.slide')?.getBoundingClientRect();
-    const devices = slideBox ? [...document.querySelectorAll('.device')].map(el => {
+    const devices = slideBox ? [...document.querySelectorAll('.device:not(.twin)')].map(el => {
       const r = el.getBoundingClientRect(), i = Math.floor((r.left + r.width / 2) / slideBox.width);
       return { slide: slides[i]?.id ?? null, layout: [...el.classList].find(c => c.startsWith('d-'))?.slice(2) ?? null, width: el.offsetWidth,
         top: Math.round(r.top), bottom: Math.round(r.bottom), slideHeight: Math.round(slideBox.height),
@@ -494,6 +931,28 @@
       const i = slideBox ? Math.floor((device.getBoundingClientRect().left + device.getBoundingClientRect().width / 2) / slideBox.width) : 0;
       return { slide: slides[i]?.id ?? null, left: Math.round(left - r.left), right: Math.round(r.right - right), phone: Math.round(right - left) };
     });
-    return { slides, texts, problems, devices, pops };
+    // Art cut by its slide's edge (a mascot losing its head): data-cross when it is meant to.
+    // A cut-out is the other way round: where its photo was cropped (a person cut at the waist),
+    // the slide's edge has to hide that straight line.
+    if (slideBox) for (const el of document.querySelectorAll('.art, .closer-art')) {
+      if (el.hasAttribute('data-cross')) continue;
+      const r = el.getBoundingClientRect(), i = Math.floor((r.left + r.width / 2) / slideBox.width);
+      const past = { left: i * slideBox.width - r.left, right: r.right - (i + 1) * slideBox.width, top: slideBox.top - r.top, bottom: r.bottom - slideBox.bottom };
+      const flat = flatSides(el), slide = slides[i]?.id ?? null, asset = el.dataset.asset ?? null;
+      const over = Math.max(...Object.entries(past).filter(([side]) => !flat.includes(side)).map(([, by]) => by));
+      if (over > 2) problems.push({ type: 'art-cut-by-edge', slide, asset, by: Math.round(over), warn: true });
+      const shows = flat.filter(side => past[side] < -2);
+      if (shows.length) problems.push({ type: 'art-flat-edge', slide, asset, sides: shows, warn: true });
+    }
+    // How far art is blown up past its own pixels (captures and bezels are sized exactly;
+    // vectors scale freely).
+    const images = slideBox ? [...document.querySelectorAll('img')].filter(img => !img.closest('.device-screen') && !img.classList.contains('device-bezel') && !img.hasAttribute('data-shot') && img.naturalWidth && !/\.svg(\?|$)/i.test(img.src)).map(img => {
+      const r = img.getBoundingClientRect(), i = Math.floor((r.left + r.width / 2) / slideBox.width);
+      const fit = getComputedStyle(img).objectFit, sx = img.offsetWidth / img.naturalWidth, sy = img.offsetHeight / img.naturalHeight;
+      const css = fit === 'cover' ? Math.max(sx, sy) : fit === 'contain' || fit === 'scale-down' ? Math.min(sx, sy) : Math.max(sx, sy);
+      const scale = (r.width / (img.offsetWidth || 1)) || 1; // transforms (scale, 3D lift)
+      return { slide: slides[i]?.id ?? null, asset: img.dataset.asset ?? null, src: decodeURIComponent(img.src).split('/').slice(-2).join('/'), natural: [img.naturalWidth, img.naturalHeight], upscale: Math.round(css * scale * 100) / 100 };
+    }).filter(x => x.slide && x.upscale > 0) : [];
+    return { slides, texts, problems, devices, pops, images };
   })();
 })();

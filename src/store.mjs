@@ -48,8 +48,15 @@ export function loadStore(dirArg, { design } = {}) {
       const file = join(dir, 'copy', `${locale}.json`);
       return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
     },
+    /** Where a capture is written (always PNG). */
     rawShot(deviceId, locale, shot) {
       return join(this.paths.raw, deviceId, locale, `${shot}.png`);
+    },
+    /** The capture to read: the PNG, or a JPEG of the same name (smaller, e.g. in example projects). */
+    shotFile(deviceId, locale, shot) {
+      const png = this.rawShot(deviceId, locale, shot);
+      const jpg = ['.jpg', '.jpeg'].map(ext => png.replace(/\.png$/, ext)).find(f => existsSync(f));
+      return existsSync(png) || !jpg ? png : jpg;
     },
   };
 }

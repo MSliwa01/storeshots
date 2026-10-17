@@ -1,0 +1,7 @@
+{
+  "assets": [
+    { "id": "world-meadow", "file": "store/design/world/world-meadow.jpg", "role": "backdrop", "fits": "the meadow world at noon: sky on top, autumn tree left, cottage right" },
+    { "id": "world-fjord", "file": "store/design/world/world-fjord.jpg", "role": "backdrop", "fits": "the fjord world before sunset: grey-blue to peach sky, mountains, red cabin, birch right" },
+    { "id": "world-meadow-snow", "file": "store/design/world/world-meadow-snow.jpg", "role": "backdrop", "fits": "the meadow in snow: blue sky, snow cloud bank, snowy cottage" }
+  ]
+}

@@ -19,7 +19,10 @@ or numbers. Keep each round to one message.
 3. **Colour**: one colour for the set (default) or a colour per slide; a contrasting middle slide?
 4. **Proof**: what true proof is there (rating ≥ 4.5 with enough ratings, downloads, press,
    a non-Apple award), on which slide? Quotes only those the user gives; you may suggest
-   real App Store reviews, the user decides.
+   real App Store reviews, the user decides. Without any, a laurel with a plain line of the
+   user's own ("Calm & cosy") works on the App Store if it describes the app. It must not be
+   a ranking, an award or a quote: `check` flags "best", "#1" and "award". Google Play asks
+   for no accolades, so leave the laurel out of a Play set.
 5. **Brand font**: if the repo has one, offer it for headlines (never automatic).
 6. Anything the set must or must not show.
 
@@ -41,15 +44,25 @@ Each question: options, then `➡️` your recommendation. Wait for the answers.
 | `premium` | near-black with brand light from below, rim-lit phones; Copilot, Revolut | finance, travel, pro, security |
 | `clean` | near-white, ink type, crisp shadows; Fantastical, Apple's own pages | productivity, tools, native-feeling apps |
 | `editorial` | paper, serif headlines, an arch behind the phone | reading, journaling, wellness, food |
-| `playful` | bright pastel, rounded black type, bubbles; Finch, Duolingo | kids, habits, pets, games (only with a real character) |
+| `playful` | saturated brand colour, rounded black type, bubbles; Finch, Duolingo | kids, habits, pets, games (only with a real character) |
 | `neon` | black + one acid colour, condensed uppercase; Ladder, Strava | fitness, sport, gaming, nightlife |
+| `bold` | one strong brand colour (or one per slide), huge rounded white type, a big phone in a flat white frame running off the slide; Simply Piano, Impulse | games, kids, energetic learning and fitness apps; not calm utilities or self-care apps |
+| `world` | the app's own world as the ground (its painted landscape, garden or space scene), phones standing in it; Finch, Weatherly | only apps that draw a world of their own (weather scenes, a garden, a game map). Never a stock photo of the subject, which reads as random |
+| `collage` | light brand-tinted ground, a phone in a slim dark frame, the parts that matter lifted out and enlarged around it (`slides[].pieces`); Structured, Tiimo | planners, productivity, habits, finance, utilities: apps whose UI is the product |
 
 ## Taste memory (a weak prior, not an oracle)
 After each approved set, append 2–5 lines to `~/.storeshots/taste.md` (the user's, local,
 never in a repo) and to the app's `store/brief.md`: what was chosen and rejected, with the
-reason in the user's words, e.g. `2026-10-05 Sprout: chose soft over poster ("calmer");
+reason in the user's words, e.g. `2026-10-05 Bloomling: chose atmosphere over soft ("calmer");
 rejected a colour per slide ("looks like a template")`.
 Read it before round 1 to make better *first proposals*, nothing more: every app is new,
 always show options and ask, never skip a round because the file "already says" something,
 and never argue with the user using it. If a new answer contradicts the file, the answer wins
 and the file gets the new line.
+
+Rejections weigh more than choices. Keep them under `## Rejected` in both files: what it was,
+a copy of the slide (in `store/rejected/`, since the next build overwrites `output/`), and the
+user's words, e.g. `2026-10-17 TrueSky: framed scene tiles floated over the painting,
+store/rejected/06-scenes.png ("the cutouts are weird")`. Before showing
+any set, go through every slide against that list. A rejected thing never comes back for that
+app; for a new app it needs the user's yes first.

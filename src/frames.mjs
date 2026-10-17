@@ -124,3 +124,20 @@ export function genericFrame(device, colour = 'black') {
     + `<path fill-rule="evenodd" fill="#000" d="${rr(sx - ring, sy - ring, W + 2 * ring, H + 2 * ring, radius + ring)} ${hole}"/>${island}</svg>`;
   return { name: `generic/${colour}`, url: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, width: fw, height: fh, screen: { x: sx, y: sy, width: W, height: H, radius }, generic: true };
 }
+
+/**
+ * A flat, phone-like frame, as many top sets draw it: one even border, no buttons, no
+ * island. "plain[/<colour>[/<width>]]": colour white (default), black or a hex without
+ * "#"; width in ‰ of the screen's width (default 34). "none" is the bare screen, rounded.
+ */
+export function plainFrame(device, name = 'plain') {
+  const [kind, colour = 'white', w] = name.split('/');
+  const W = device.width, H = device.height, phone = H / W > 1.7;
+  const b = kind === 'none' ? 0 : Math.round(W * (Number(w) || 34) / 1000);
+  const radius = Math.round(W * (phone ? 0.15 : 0.03)), fill = { white: '#ffffff', black: '#111214' }[colour] ?? `#${colour}`;
+  const rr = (x, y, ww, hh, r) => `M${x + r} ${y}H${x + ww - r}A${r} ${r} 0 0 1 ${x + ww} ${y + r}V${y + hh - r}A${r} ${r} 0 0 1 ${x + ww - r} ${y + hh}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + hh - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+  const fw = W + 2 * b, fh = H + 2 * b;
+  const body = b ? `<path fill-rule="evenodd" fill="${fill}" d="${rr(0, 0, fw, fh, radius + b)} ${rr(b, b, W, H, radius)}"/>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${fw}" height="${fh}" viewBox="0 0 ${fw} ${fh}">${body}</svg>`;
+  return { name, url: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, width: fw, height: fh, screen: { x: b, y: b, width: W, height: H, radius }, generic: true };
+}

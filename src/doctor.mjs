@@ -5,7 +5,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { imageApiKey } from './art.mjs';
+import { codexLogin, imageApiKey } from './art.mjs';
+import { hasRembg } from './cutout.mjs';
 import { ocrLanguages } from './elements.mjs';
 import { launchBrowser } from './browser.mjs';
 import { FRAMES_DIR } from './frames.mjs';
@@ -48,7 +49,10 @@ export async function doctor(store, { log = console.error } = {}) {
   }
   const langs = ocrLanguages();
   add('tesseract (OCR)', !!langs, langs ? `languages: ${langs.filter(l => l !== 'osd').join(', ')}` : 'not found (optional: `elements` then ranks by pixels only)', 'install tesseract-ocr and the language packs of your locales', false);
-  add('image API key', !!imageApiKey(), imageApiKey() ? 'set (optional art generation)' : 'not set (optional)', 'export IMAGE_API_KEY to enable `storeshots art`', false);
+  const imageVia = imageApiKey() ? 'IMAGE_API_KEY set' : codexLogin() ? 'Codex CLI (ChatGPT login)' : null;
+  add('image generation', !!imageVia, imageVia ?? 'none (optional)', '`codex login` with ChatGPT, or export IMAGE_API_KEY, to enable `storeshots art`', false);
+  const rembg = hasRembg();
+  add('rembg (cut-outs)', rembg, rembg ? 'found' : 'not found (optional: `storeshots cutout`)', 'uv tool install "rembg[cpu,cli]"', false);
 
   for (const c of checks) log(`${c.ok ? 'ok  ' : c.required ? 'FAIL' : 'warn'}  ${c.name.padEnd(22)} ${c.detail ?? ''}${c.fix ? `\n      fix: ${c.fix}` : ''}`);
   return { ok: checks.every(c => c.ok || !c.required), checks };

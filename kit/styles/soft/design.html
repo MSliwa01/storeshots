@@ -26,7 +26,8 @@
 
   .caption { text-align: center; color: var(--ink); }
   h1 { margin: 0; font-weight: 500; font-size: calc(var(--u) * 10.8); line-height: 1.04; letter-spacing: -.04em; text-wrap: balance; }
-  h1 em { font-weight: 800; color: color-mix(in srgb, var(--bg) 62%, black); letter-spacing: -.045em; }
+  /* Lightness capped in OKLCH: a golden or lime brand darkened in sRGB stays too light to read. */
+  h1 em { font-weight: 800; color: oklch(from color-mix(in srgb, var(--bg) 62%, black) min(l, .5) c h); letter-spacing: -.045em; }
   p { margin: calc(var(--u) * 2.8) auto 0; max-width: 94%; font-weight: 600; font-size: calc(var(--u) * 5); line-height: 1.2; color: rgba(27, 29, 34, .7); text-wrap: balance; }
 
   .device { filter: drop-shadow(0 calc(var(--u) * 5) calc(var(--u) * 7) color-mix(in srgb, var(--bg) 45%, rgba(0, 0, 0, .35))); }

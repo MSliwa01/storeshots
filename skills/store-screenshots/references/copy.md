@@ -11,7 +11,8 @@ Distilled from 14 screenshot skills and expert guides (see the tool repo's docs/
 7. **Plain searchable words** from the listing (app name, subtitle, keywords) in slides 1–3 where natural; never stuffing.
 8. **Never:** prices, "free", "best", "#1", "new", exclamation marks, questions in headlines, hype words (innovative, revolutionary, powerful, seamless, smart), "Download now", competitors, other platforms.
 9. **Tests before layout:** (a) 1-second test at arm's length; (b) cover-the-UI test: read only the headlines in order: they must tell a story, not list features, and shuffling them must break it; (c) competitor test: if the line still works with another app's name, make it more specific.
-10. Write a copy deck first (`store/copy-deck.md`): per slide three options (moment / outcome / pain), the choice and why. Lock it before designing.
+10. **Name what the screen proves.** A number, a place or a named feature beats a generic verb: "41 games, 4 skills" over "Pick your next game", "Fiord czy Paryż?" over "Wybierz swój widok". Check each headline against its capture: it must not promise more than the screen shows. Slide 1's headline must not repeat the app's subtitle, which search prints right above the screenshots.
+11. Write a copy deck first (`store/copy-deck.md`): per slide three options (moment / outcome / pain), the choice and why. Lock it before designing.
 
 ## Formulas by slot
 - Hero: `[outcome], without [pain]` · `No more [pain]` · `Your [noun], [benefit]` · `[verb] [noun]. [verb] [noun].`
@@ -41,9 +42,9 @@ One line, 5–5.5 % of the width: the mechanism or a concrete detail that suppor
 ## Language specifics (example: Polish)
 - Prefer native words over anglicisms (Polish "przypomnienie", not "notyfikacja").
 - Watch line length: Polish words are long; prefer short synonyms over shrinking the font.
-- Diacritics must render (ąćęłńóśźż): check the font covers Latin Extended-A.
+- Diacritics must render (ąćęłńóśźż): `storeshots check` fails any character the design's font lacks.
 - Sentence case, no trailing period in headlines.
-- Typographic quotes „…” and the en dash – where needed.
+- Typographic quotes „…”, the en dash and no one-letter words at line ends are set automatically; write plain quotes and hyphens.
 
 ## Other languages
 Rewrite per market, don't translate literally. Short headlines grow 160–300% in translation, so leave room and let `data-fit` shrink to a floor; if it still doesn't fit, reword. CJK: fewer characters, native font. RTL (ar, he): mirror the layout, not the device image.

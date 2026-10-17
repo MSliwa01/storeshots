@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
-import { check } from '../src/check.mjs';
+import { check, nearBlack } from '../src/check.mjs';
 import { loadStore } from '../src/store.mjs';
 import { fakeStore } from './helpers.mjs';
 
@@ -81,4 +82,43 @@ test('check: pop-outs stick out evenly or sit inside, never one-sided or flush',
   assert.equal(pops.length, 2, pops.join('\n'));
   assert.ok(pops.some(w => /slide2: the pop-out sticks out unevenly/.test(w)));
   assert.ok(pops.some(w => /slide3: the pop-out is flush/.test(w)));
+});
+
+test('check: copy rules and contrast hints', () => {
+  const r = run(fakeStore({ texts: [
+    title(150, { text: 'The best app, free!!', contrast: 2.1, color: [180, 180, 180], ground: { colour: '#ffffff', busy: 0.01 } }),
+    title(150, { key: 'b.title', slide: 'slide2', text: 'Unlock your plants and water them every single day' }),
+    title(150, { key: 'c.title', slide: 'slide3', text: 'Also on Android', contrast: 2.5, ground: { colour: '#808080', busy: 0.3 } }),
+  ] }));
+  assert.ok(r.errors.some(e => /contrast 2.1:1.*text #b4b4b4 → #[0-9a-f]{6} would reach 4.5:1/.test(e)), r.errors.join('\n'));
+  assert.ok(r.errors.some(e => /c.title.*busy \(σ 0.3\)/.test(e)));
+  assert.ok(r.errors.some(e => /another platform/.test(e)));
+  assert.ok(r.warnings.some(w => /unprovable claim \("best"\)/.test(w)), r.warnings.join('\n'));
+  assert.ok(r.warnings.some(w => /a price or "free"/.test(w)));
+  assert.ok(r.warnings.some(w => /more than one "!"/.test(w)));
+  assert.ok(r.warnings.some(w => /"unlock" is filler/.test(w)));
+  assert.ok(r.warnings.some(w => /headline has 9 words/.test(w)));
+});
+
+test('check: hidden letters fail unless the text is meant to sit behind', () => {
+  const hidden = [{ c: 'R', share: 0.9, top: 0.9 }];
+  const r = run(fakeStore({ texts: [title(150, { hidden, hiddenShare: 0.3 }), title(150, { key: 'b.title', slide: 'slide2', hidden, hiddenShare: 0.3, behind: true })] }));
+  assert.ok(r.errors.some(e => /a.title.*letters hidden behind.*"R"/.test(e)), r.errors.join('\n'));
+  assert.ok(!r.errors.some(e => /b.title/.test(e)));
+});
+
+test('nearBlack: black and dark grey grounds, not deep saturated colours', () => {
+  assert.equal(nearBlack({ lightness: 4, saturation: 5 }), true);
+  assert.equal(nearBlack({ lightness: 15, saturation: 10 }), true);
+  assert.equal(nearBlack({ lightness: 16, saturation: 60 }), false); // navy
+  assert.equal(nearBlack({ lightness: 92, saturation: 15 }), false);
+});
+
+test('check: the same screen twice in the first three slides warns, later on it does not', () => {
+  const dir = fakeStore({ files: 3, texts: [title(150)] }), file = join(dir, 'screenshots.json');
+  const config = JSON.parse(readFileSync(file, 'utf8'));
+  writeFileSync(file, JSON.stringify({ ...config, slides: [{ id: 'garden', shot: 'garden' }, { id: 'opener', shot: null }, { id: 'task', shot: 'garden' }, { id: 'closer', shot: 'garden' }] }));
+  const { warnings } = run(dir);
+  assert.equal(warnings.filter(w => /show the same screen/.test(w)).length, 1, warnings.join('\n'));
+  assert.ok(warnings.some(w => /slides "garden" and "task" show the same screen \("garden"\)/.test(w)), warnings.join('\n'));
 });

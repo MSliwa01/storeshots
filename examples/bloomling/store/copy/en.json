@@ -1,0 +1,26 @@
+{
+  "garden": {
+    "title": "Good news,\n*every morning*",
+    "subtitle": "One true, hopeful story a day"
+  },
+  "task": {
+    "title": "Then\n*one tiny step*",
+    "subtitle": "A one-minute task to feel good"
+  },
+  "done": {
+    "title": "Notice\n*how you feel*",
+    "subtitle": "A gentle mood check"
+  },
+  "memories": {
+    "title": "A flower\n*every 33 days*",
+    "subtitle": "Your finished blooms, kept"
+  },
+  "buddy": {
+    "title": "Pick your\n*garden buddy*",
+    "subtitle": "Sheepy, Doggy or Piggy"
+  },
+  "closer": {
+    "title": "Bloom\n*every day*",
+    "subtitle": "Good news for a calmer mind"
+  }
+}

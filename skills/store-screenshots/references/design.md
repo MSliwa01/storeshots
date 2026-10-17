@@ -9,20 +9,36 @@ Sources and numbers: the tool repo's docs/research (design.md, guides.md, librar
 - Apple's own tests move conversion by single digits; only big differences show up. Don't polish details at the expense of the hook.
 
 ## Story (5–8 slides)
-1. **Hero**: the main outcome over the most characteristic screen. The only slide many people see.
+1. **Hero**: the main outcome over the most characteristic screen. The only slide many people see. Pick it by the app's ground:
+   - The app's own scenery is the product (painted weather scenes, a garden that grows): a statement can open, a huge headline on that scenery and no phone. The scenery proves the claim.
+   - Anything else (a utility on a plain ground, a game whose product is its play): open with the core result on real UI, large enough to read in search. A statement on a flat field or around a mascot proves nothing; on a utility it belongs on the closer, if anywhere.
 2. **Differentiator**: what this app does that others don't.
 3. **Top benefit** with its screen.
 4–6. **More benefits**: one idea per slide, most important first (widgets, reminders, privacy, sync…).
 - **Second to last (optional)**: trust ("Data from official council schedules", ratings strip).
 - **Last**: breadth (feature wall of short words, or a mosaic of small screens), not another single feature.
-Follow the order in which someone actually uses the app. Never lead with onboarding, settings, login, empty states or a splash.
+Follow the order in which someone actually uses the app. Never lead with onboarding, settings, login, empty states or a splash. Slides 1–3 show three different screens and three different benefits (`check` warns when a capture repeats there).
+
+## Plain by default
+Real UI on the app's own ground is the default. Anything else on a slide (a texture, a mascot, a prop, a cut-out, cards lifted onto a scene) needs a reason in one sentence: what the slide fails to say without it. "Variety", "to fill space" and "the brief asked for the app's art" are not reasons. A rule an addition happens to satisfy does not make it look good: a faint texture made of the app's own art is still a texture.
+
+These read as artificial in rated rounds, every time:
+- A faint line-art texture (stars, orbits, doodles) laid over a flat ground. It reads as scratches.
+- Small framed tiles cut out of a picker and floated, tilted, over a painted scene. Show the real picker on a zoomed phone instead.
+- A mascot as the opener's hero when the mascot is not what people come for.
+- A photo cut-out in a drawn or painted world, and props drawn next to UI.
+- A frosted-glass card lifted with whatever was behind it.
+- A ground that repeats the screen (the same painting behind the phone and inside it) or contradicts it (a cloud beside "clear sky"). Use another scene of the app's own art that matches the screen's weather and time of day, or the screen's own sky without its UI.
+- Part of the ground peeking out from behind a phone or a card (a roof, a window). Move it fully clear or fully behind, or mirror the ground.
+
+When a slide adds anything beyond real UI on the app's own ground, render two versions (with and without it, or two treatments) and let the user pick. Don't settle it alone: the user's eye has rejected additions that every rule and every reviewing model passed.
 
 ## Composition: a rhythm, not a template
 Read `patterns.md` before designing: what strong reference sets do slide by slide, and the patterns they share. (These rules come from real design reviews: users rejected repeated phone layouts, effects placed by eye, duplicated UI and piles of pop-outs.)
 - **Vary the composition, keep the language.** Palette, type, radii, rim, shadow and mascot style stay constant; phone size, tilt, placement and headline position change from slide to slide. The same phone layout on every slide looks cheap. Never repeat a composition on two neighbouring slides.
-- **Spreads are optional and hand-made.** Two slides as one picture (one big phone or a cascade across the seam) only when it is designed as a pair, with each slide's empty space given a job. A phone pushed sideways just to cross a seam leaves a dead wedge beside it; the built-in layouts keep every phone inside its slide.
-- **Lift one thing, subtly.** The element the headline names, 5–20 % wider than the phone, level with its source, flat unless the phone itself is in 3D. One per slide (two only if they belong together). Five lifted rows read as messy. Let contrast do the work (thin rim + soft shadow); no glow on everything.
-- **Mix in slides without a phone**: real widget / Live Activity renders, real chat bubbles with the mascot, a feature wall, a before/after, a photo. Never invented UI.
+- **Spreads are an option for slides 1–2, never the default.** `"layout": "spread"` on slide 1 puts one phone across slides 1 and 2, tilted, with the second half shifted by the store's gap so it lines up. Search shows the first three slides side by side, so only 1–2 read as one picture. Slide 2 keeps its own headline and gets a job for its free corner (a lift, a widget, proof). The seam must not cut the headline or a hero number. Show the pair to the user and let them judge it; a spread that doesn't look designed is worse than none.
+- **Lift one thing, big enough to read.** The element the headline names: a row, a notification, a number, a chip, a short card. 15 words at most, never a paragraph. Its biggest line must reach 3 % of the slide's width in capitals (aim 3.5–4 %) and every line 2 %; leave `size` out and the kit sizes it from its text. Body text in a full-width crop can't get there, so crop narrow or lift something with bigger type (numbers do best). One per slide (two only if they belong together). Upright, no rim, a soft shadow; it may be wider than the phone. Five lifted rows read as messy.
+- **Mix in slides without a phone** (`"layout": "free"`): real widget and Live Activity renders as `art` with `"place": "float"`, real chat bubbles with the mascot, a feature wall, a before/after, a photo. Never invented UI.
 - **Vary headline position**: top on most slides, bottom on one or two (phone hanging from the top edge, or a full-bleed picture).
 - Effects placed by eye still read as random: every effect needs a reason you can say in one sentence (it is what the headline names, it is the mascot reacting).
 - Look at real sets first (`storeshots refs`, or the iTunes Search API → `screenshotUrls`) and name the patterns you borrow in the design file's header comment.
@@ -31,6 +47,9 @@ Read `patterns.md` before designing: what strong reference sets do slide by slid
 - **Caption on top + framed device below** (bleeding off the bottom): the default; safe for utilities (Things 3).
 - **Device on top, caption below**: one contrast slide to break the rhythm.
 - **Pop-out** (`.device > .pop`): a piece of the UI grows out of the screen past the bezel, when one panel *is* the benefit. It must cover its source or leave an empty slot (`data-leave`), never sit next to a visible copy of itself. One per slide, 5–20 % wider than the phone.
+- **Lifts** (`slides[].pieces`, any style): one whole object of the screen lifted out as a card of its own, over its source and past the phone's edge. Never a slice through a row, a picture or a paragraph; never two on top of each other; at most two per slide, on a few slides of the set, not all. `storeshots elements` finds the boxes and marks the ones whose text is too small to lift; `check` fails crops that cut through content and warns about small text, long ones, and a crop a few pixels wider than its card (it carries a strip of the screen; crop that much tighter). With tesseract installed it also warns when a lift, a pop-out or art in front covers part of a word on the phone's screen or touches one: put it over a calm part of the screen or cover that text whole.
+  In 208 top sets, a lift appears when the slide's claim is one state, event or number and one small element of the screen shows it (a row, a notification, a score, a chip). Lists, chat, dashboards and photo apps lift most (65–84 % of top sets). Maps, scenery, feeds and game boards get a tilted or zoomed phone instead, with at most an alert lifted over it. On a dark UI the lifted element needs a light or accent surface to separate.
+- **Zoom** (`"layout": "zoom"` + `focus`): the phone 1.3–1.6× its size, moved sideways so one corner and two frame edges stay in view with background beside them, cut by the slide on the other two sides. At most two per set. Pick a focus of one to three large things (a big number, a widget, a map). A dense screen reads better with a lift than a zoom.
 - **Frameless full-bleed screen** (`.screen`): when the UI explains itself (Duolingo).
 - **Cross-slide element**: one per 5+ slide set, at most two in 8–10. A shape, a path, a gradient, a phone corner crosses a seam by 10–30%; never text, faces, numbers or key UI. Each PNG must still read alone.
 - **Floating chips**: small cards with real values from the app (a date, a count, a fraction name) next to the phone. Tell the story without more copy.
@@ -50,9 +69,11 @@ Never use the same layout twice in a row. Use 1–2 inverted (dark/light) slides
 - **Nothing outside the phone below 4 % of the width** (`storeshots check` fails it), aim ≥ 5 %. If a text can't be that big, delete it. Real UI inside the phone is exempt, which is exactly why the one lifted element must be the part that matters.
 - At most 3 text levels and 4 lines of copy per slide.
 - Check `output/review/*-strip.png` (≈ 200 px per slide, red line after slide 3): every headline must be readable there.
+- A whole screen in a mid-size phone is unreadable in search results. Give each slide one readable hero: a pop, a cutout, a zoom, or a phone big enough that its main number or card reads at thumbnail size.
 
 ## Mascot rules
-- The mascot needs a job or it goes: its own phone-less slide, the speaker of real UI it owns in the app (e.g. the chat assistant answering in real bubbles), or a die-cut sticker bridging copy and phone. Not decoration on a slide that is about something else (it reads as forced in).
+- The mascot needs a job or it goes: its own phone-less slide or the closer, the speaker of real UI it owns in the app (e.g. the chat assistant answering in real bubbles), or a part of the scene doing something (peeking over the phone at a game, `"place": "peek"`). Not decoration on a slide that is about something else (it reads as forced in).
+- No character stickers beside phones. A character standing next to a phone reads as clip art. At most twice per set.
 - At least ~380 px tall on its own slide; never in the headline zone or over UI that must be read; never clipped partway.
 - Ground it: an elliptical cast shadow under a standing character (10–25 % black, 60–80 % of its width). Floating with only a drop shadow reads as pasted in.
 - Use the highest-resolution original art; never upscale a 512 px asset beyond ~40 % of the width.
@@ -81,6 +102,9 @@ Ground each in the app's world (its subject, materials, vocabulary), not in gene
 - [ ] Every headline is readable in the search mock (thumbnail ~128 pt wide).
 - [ ] One idea per slide; headline 3–6 words, max 2 lines; no feature lists.
 - [ ] Every slide shows real UI with populated, local data; 9:41; no alerts or debug UI.
+- [ ] Slides 1–3 show three different screens.
+- [ ] Every addition beyond real UI (texture, mascot, prop, cut-out) has its one-sentence reason; the ground neither repeats nor contradicts the screen, and nothing peeks out from behind a phone or card.
+- [ ] Nothing on the list of rejections in `~/.storeshots/taste.md` and `store/brief.md` came back.
 - [ ] No two adjacent slides share a layout; at most one pop-out per slide.
 - [ ] Cross-slide elements look deliberate in the strip and harmless in each PNG.
 - [ ] Palette, type and spacing consistent across the set; text contrast ≥ 4.5:1.

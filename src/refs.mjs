@@ -84,7 +84,7 @@ export function saveApp(app, { country, tag, count = 6, width = 400 }) {
   if (files.length > 1) execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...inputs, '-filter_complex', filter, '-q:v', '3', sheet]);
   else execFileSync('cp', [files[0], sheet]);
   writeFileSync(join(dir, 'meta.json'), JSON.stringify({
-    name: app.trackName, id: app.trackId, seller: app.sellerName, genre: app.primaryGenreName, country, tag,
+    name: app.trackName, id: app.trackId, seller: app.sellerName, genre: app.primaryGenreName, country, tag, icon: app.artworkUrl512 ?? app.artworkUrl100,
     rating: app.averageUserRating, ratings: app.userRatingCount, url: app.trackViewUrl, screenshots: urls,
     landscape: /x\d+bb/.test(urls[0]) && (() => { const m = urls[0].match(/(\d+)x(\d+)bb/); return m && +m[1] > +m[2]; })(),
   }, null, 2));
@@ -140,3 +140,30 @@ export async function board({ countries = ['us'], genres, apps, limit = 8, out }
   }
   return { board: file, sets: chosen.map(({ letter, slug, name, genre }) => ({ letter, slug, name, genre })) };
 }
+
+/**
+ * A reference app as a store listing for the simulator: its icon and screenshots at
+ * `width` px, downloaded once next to its meta.json (icon fetched through the lookup API
+ * for libraries made before icons were recorded).
+ */
+export async function refListing(dir, { width = 700, count = 6 } = {}) {
+  const { existsSync: exists, readFileSync, writeFileSync: write } = await import('node:fs');
+  const metaFile = join(dir, 'meta.json');
+  const m = JSON.parse(readFileSync(metaFile, 'utf8'));
+  if (!m.icon) {
+    const [app] = await lookup([m.id], String(m.country ?? 'us').slice(0, 2));
+    m.icon = app?.artworkUrl512 ?? app?.artworkUrl100 ?? null;
+    if (app && !m.subtitle) m.description = (app.description ?? '').split('\n')[0].slice(0, 160);
+    write(metaFile, JSON.stringify(m, null, 2));
+  }
+  const iconFile = join(dir, 'icon.jpg');
+  if (m.icon && !exists(iconFile)) execFileSync('curl', ['-sSfL', '-o', iconFile, m.icon.replace(/\/[^/]+$/, '/256x256bb.jpg')]);
+  const shots = [];
+  for (const [i, url] of (m.screenshots ?? []).slice(0, count).entries()) {
+    const file = join(dir, `w${width}-${String(i + 1).padStart(2, '0')}.jpg`);
+    if (!exists(file)) execFileSync('curl', ['-sSfL', '-o', file, url.replace(/\/[^/]+$/, `/${width}x0w.jpg`)]);
+    shots.push(file);
+  }
+  return { name: m.name, subtitle: m.genre, seller: m.seller, rating: m.rating, ratings: m.ratings, icon: exists(iconFile) ? iconFile : null, shots, description: m.description, landscape: m.landscape };
+}
+

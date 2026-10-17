@@ -1,0 +1,204 @@
+<!doctype html>
+<!-- storeshots {"background": "glow", "colours": "one", "rhythm": ["hero", "lean", "hang", "offset", "tilt", "hang", "offset", "hang", "offset"]} -->
+<!--
+  Style "atmosphere" (after Opal, Mercury Weather, Calm): light and air, with the app's UI
+  large and sharp in front. Each slide's background is its own screen blurred into light,
+  so the set is one continuous sky in the app's real colours (no stock art, no generated
+  art). A scrim keeps the caption readable; grain gives the light some material.
+  Type: Instrument Sans, a heavy line with the accent words in a light weight.
+  For: weather, sleep, focus, health, music, photo; any app whose screens are colour-rich.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Instrument; src: url(fonts/InstrumentSans.ttf); font-weight: 400 700; font-stretch: 75% 100%; }
+  :root { --brand: #f2b441; --hue: 39; --deep: hsl(39 64% 11%); --deep-2: hsl(57 59% 17%); --mid: hsl(39 68% 30%); --glow-a: hsl(39 92% 58%); --glow-b: hsl(94 88% 62%); --glow-c: hsl(354 85% 58%); --accent-on-dark: hsl(39 88% 74%); --accent-on-light: hsl(39 90% 28%); --paper: hsl(39 22% 94%); --paper-2: hsl(64 28% 89%); --ink: hsl(39 35% 11%); --vivid: hsl(39 85% 46%); --vivid-2: hsl(67 85% 50%); --vivid-3: hsl(11 85% 44%); --slides: 6; }
+  :root { --phone-w: calc(var(--u) * 82); --hero-top: 29%; --offset-top: 27%; --lean: 5deg; --hang-top: -15%;
+    --caption-top: calc(var(--u) * 11); --caption-bottom: calc(var(--u) * 10); --glow-blur: calc(var(--u) * 13); --glow-brightness: 1; --glow-saturate: 1.6; }
+  body { background: var(--deep); font-family: Instrument, sans-serif; }
+
+  /* Scrim: darker where the caption sits (top, or bottom on hanging slides), open in the middle. */
+  .glow-field::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(4, 6, 12, .42) 0%, rgba(4, 6, 12, .12) 28%, rgba(4, 6, 12, 0) 50%, rgba(4, 6, 12, 0) 70%, rgba(4, 6, 12, .45) 100%); }
+  .strip::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+  /* On a light app (white UI), the light is pale: dark text, a light scrim. */
+  .glow-field.on-light::after { background: linear-gradient(180deg, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, .15) 30%, rgba(255, 255, 255, 0) 52%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, .5) 100%); }
+  .slide.on-light .caption { color: #14161c; }
+  .slide.on-light h1, .slide.on-light p { text-shadow: none; }
+  .slide.on-light p { color: rgba(20, 22, 28, .78); }
+  .caption { text-align: center; color: #fff; }
+  h1 { margin: 0; font-weight: 640; font-size: calc(var(--u) * 10.6); line-height: 1.02; letter-spacing: -.035em; text-wrap: balance;
+    text-shadow: 0 calc(var(--u) * .4) calc(var(--u) * 3) rgba(0, 0, 0, .25); }
+  h1 em { font-weight: 400; letter-spacing: -.04em; }
+  p { margin: calc(var(--u) * 2.8) auto 0; max-width: 94%; font-weight: 500; font-size: calc(var(--u) * 5); line-height: 1.2; color: rgba(255, 255, 255, .9); text-wrap: balance;
+    text-shadow: 0 calc(var(--u) * .3) calc(var(--u) * 2) rgba(0, 0, 0, .3); }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 5) calc(var(--u) * 8) rgba(0, 0, 0, .45)); }
+  .pop { --pop-rim: rgba(255, 255, 255, .6); --pop-rim-width: 4; --pop-shadow: 0 0 0 calc(var(--u) * .35) rgba(255, 255, 255, .55), 0 calc(var(--u) * 3) calc(var(--u) * 9) rgba(0, 0, 0, .5); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * .5) rgba(255, 255, 255, .4), 0 calc(var(--u) * 5) calc(var(--u) * 12) rgba(0, 0, 0, .45); }
+  /* Shared compositions, inlined into every style. Units: --u = 1 % of the slide width.
+   A device's slide index is --i; styles tune --phone-w, --hero-top, --lean, --hang-top,
+   --caption-top, --caption-bottom. Every phone stays inside its own slide. */
+.slide { z-index: 3; }
+.caption { position: absolute; inset-inline: calc(var(--u) * 8); top: var(--caption-top, calc(var(--u) * 10)); }
+.caption.bottom { top: auto; bottom: var(--caption-bottom, calc(var(--u) * 10)); }
+.caption.center { text-align: center; }
+
+.device { position: absolute; z-index: 1; width: var(--phone-w, calc(var(--u) * 80)); }
+/* One phone size for the whole set (3D poses excepted): only position and pose change. */
+.d-hero, .d-hang, .d-offset { left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80))) / 2); }
+.d-hero { top: var(--hero-top, 32%); }
+.d-offset { top: var(--offset-top, 33%); }
+.d-hang { top: var(--hang-top, -18%); }
+/* Lean: the same phone, centred and tilted (--lean); its empty corners mirror each other. */
+/* A tilt widens the phone by its height × sin(angle), so the tilted phone is a little smaller
+   (90 %) and tilted gently (5°): its corners keep a clear margin from both slide edges instead
+   of grazing the neighbour. */
+.d-lean { width: calc(var(--phone-w, calc(var(--u) * 80)) * .9); left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .9) / 2);
+  top: calc(var(--slide-h) + var(--u) * 10 - var(--phone-w, calc(var(--u) * 80)) * .9 * 2.0408); rotate: var(--lean, 5deg); } /* still runs off the bottom */
+
+/* Pop-outs: grow past the bezel (--pop-reach = width as a share of the phone's). */
+.d-hero .pop { --pop-reach: 1.08; }
+.d-hang .pop { --pop-reach: 1.08; }
+.d-offset .pop { --pop-reach: 1.1; }
+.d-lean .pop { --pop-reach: 1.04; }
+
+/* Closer with a fan: the icon and the line at the top, the set's screens below as small
+   phones in an arc (centre one in front), running off the bottom edge. */
+.c-closer.with-fan .closer-icon { top: 10%; left: calc(50% - var(--u) * 13); width: calc(var(--u) * 26); }
+.c-closer.with-fan .caption { top: 24%; }
+.d-fan { width: calc(var(--u) * 42); left: calc(var(--slide-w) * var(--i) + var(--u) * (29 + var(--k) * 25));
+  top: calc(58% + var(--u) * 7 * var(--k) * var(--k)); rotate: calc(var(--k) * 5deg); z-index: calc(10 - var(--k) * var(--k));
+  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .28)); }
+
+/* Closer: no phone, the app icon and one statement. */
+.c-closer .closer-icon { position: absolute; left: calc(50% - var(--u) * 21); top: 31%; width: calc(var(--u) * 42); aspect-ratio: 1; border-radius: 22.5%;
+  box-shadow: 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, .35); }
+.c-closer .caption { top: 58%; }
+
+/* 3D: a camera on the phone, real thickness (--depth), pops lifted along z.
+   tilt: turned towards the caption; lay: lying on the slide, seen from above. */
+.d-tilt { --depth: .1; left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .92) / 2); top: var(--tilt-top, 29%);
+  width: calc(var(--phone-w, calc(var(--u) * 80)) * .92); transform: perspective(calc(var(--u) * 520)) rotateY(var(--tilt-y, -26deg)) rotateX(var(--tilt-x, 10deg)) rotateZ(var(--tilt-z, -3deg)); }
+.d-tilt .pop { --pop-reach: 1; --pop-z: calc(var(--u) * 6); }
+.d-lay { --depth: .1; --shadow-y: 0; left: calc(var(--slide-w) * var(--i) + var(--u) * 17); top: var(--lay-top, 25%); width: calc(var(--phone-w, calc(var(--u) * 80)) * .82);
+  transform: perspective(calc(var(--u) * 520)) rotateX(var(--lay-x, 34deg)) rotateZ(var(--lay-z, -4deg)); transform-origin: 50% 0; }
+.d-lay .pop { --pop-reach: 1.02; --pop-z: calc(var(--u) * 16); }
+
+/* A slide with a laurel under its caption: its phone starts lower. */
+.device.with-proof:not(.d-hang) { margin-top: calc(var(--u) * 13); }
+
+/* The app's own art (slides[].art). --art-w: width in % of the slide. */
+.art { position: absolute; z-index: 2; width: calc(var(--u) * var(--art-w, 34)); height: auto; pointer-events: none;
+  filter: drop-shadow(0 calc(var(--u) * 1.2) calc(var(--u) * 2.4) rgba(0, 0, 0, .22)); }
+/* beside: over the phone's lower corner, in front of it. */
+.art.a-beside.on-right { left: calc(var(--slide-w) * (var(--i) + 1) - var(--u) * (var(--art-w, 34) + 3)); }
+.art.a-beside.on-left { left: calc(var(--slide-w) * var(--i) + var(--u) * 3); }
+.art.a-beside { bottom: 3%; }
+.art.a-beside.at-hang { bottom: auto; top: 44%; }
+/* peek: behind the phone, looking over its top edge (over its bottom edge on a hanging phone). */
+.art.a-peek { z-index: 0; bottom: calc(100% - var(--hero-top, 32%) - var(--u) * 10); }
+.art.a-peek.at-offset { bottom: calc(100% - var(--offset-top, 33%) - var(--u) * 10); }
+.art.a-peek.at-lean { bottom: calc(100% - 37% - var(--u) * 10); }
+.art.a-peek.at-hang { bottom: auto; top: calc(var(--hang-top, -18%) + var(--phone-w, calc(var(--u) * 80)) * 2.06 - var(--u) * 10); }
+.art.a-peek.on-right { left: calc(var(--slide-w) * var(--i) + var(--slide-w) / 2 + var(--phone-w, calc(var(--u) * 80)) / 2 - var(--u) * (var(--art-w, 40) + 4)); }
+.art.a-peek.on-left { left: calc(var(--slide-w) * var(--i) + var(--slide-w) / 2 - var(--phone-w, calc(var(--u) * 80)) / 2 + var(--u) * 4); }
+/* Pieces (slides[].pieces): crops of a capture as cards of their own, centred on --at-x/--at-y
+   (% of the slide), --size wide, in front of the phone. */
+.piece { position: absolute; z-index: 2; box-sizing: border-box; overflow: hidden; width: calc(var(--slide-w) * var(--size) / 100);
+  left: calc(var(--slide-w) * (var(--i) + var(--at-x) / 100)); top: calc(var(--at-y) * 1%); translate: -50% -50%; rotate: var(--rot, 0deg);
+  /* Lifted by a soft shadow in three layers (no outline: top sets almost never draw one). */
+  box-shadow: var(--piece-shadow, 0 calc(var(--u) * .3) calc(var(--u) * .8) rgba(20, 24, 40, .12), 0 calc(var(--u) * 1.6) calc(var(--u) * 4) rgba(20, 24, 40, .16), 0 calc(var(--u) * 5) calc(var(--u) * 12) rgba(20, 24, 40, .2)); }
+/* rim: a thin white rim, for a dark card on a dark phone. */
+.piece.rim { box-shadow: 0 0 0 calc(var(--u) * .7) #fff, var(--piece-shadow, 0 calc(var(--u) * 1.6) calc(var(--u) * 4) rgba(20, 24, 40, .16), 0 calc(var(--u) * 5) calc(var(--u) * 12) rgba(20, 24, 40, .2)); }
+.piece > .zoom { width: 100%; }
+/* backdrop: a scene behind one slide (look.background {asset} spans the strip). */
+.art-backdrop { position: absolute; top: 0; z-index: 0; width: var(--slide-w); height: var(--slide-h); background-size: cover; background-position: center; }
+.backdrop[data-asset] { background-size: cover; background-position: center; }
+/* look.blur: the picture out of focus so the phone and the caption stand out. Blurred with an
+   overscan (--o) that clip-path cuts away, so the edges stay solid at the seams.
+   soft: a light blur everywhere; strong: like atmosphere; caption: a blurred copy over the
+   caption band only, fading out before the phone (at the bottom on a hanging phone). */
+.blurred { --o: calc(var(--u) * 5); clip-path: inset(var(--o)); }
+.art-backdrop.blurred { margin-left: calc(-1 * var(--o)); top: calc(-1 * var(--o)); width: calc(var(--slide-w) + 2 * var(--o)); height: calc(var(--slide-h) + 2 * var(--o)); }
+.backdrop.blurred { inset: calc(-1 * var(--o)); }
+.blurred.soft { filter: blur(calc(var(--u) * .7)); }
+.blurred.strong { filter: blur(calc(var(--u) * 2.4)) saturate(1.1) brightness(1.04); }
+.blurred.caption { filter: blur(calc(var(--u) * 1.6)); -webkit-mask-image: linear-gradient(180deg, #000 24%, transparent 40%); mask-image: linear-gradient(180deg, #000 24%, transparent 40%); }
+.blurred.caption.low { -webkit-mask-image: linear-gradient(0deg, #000 24%, transparent 40%); mask-image: linear-gradient(0deg, #000 24%, transparent 40%); }
+/* closer: the mascot in place of the app icon, sized by height (--art-h, % of the slide). */
+.c-closer .closer-icon.closer-art { width: auto; height: calc(var(--slide-h) * var(--art-h, 30) / 100); left: 50%; translate: -50% 0; aspect-ratio: auto; border-radius: 0; box-shadow: none;
+  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .25)); top: auto; bottom: 44%; }
+.c-closer.with-fan .closer-icon.closer-art { height: calc(var(--slide-h) * var(--art-h, 15) / 100); bottom: auto; top: 6%; }
+
+</style>
+</head>
+<body>
+<div class="strip">
+  <div class="glow-strip" style="width: calc(var(--slide-w) * 6.3)"><img class="glow" data-shot="fact" style="left: calc(var(--slide-w) * 0); width: calc(var(--slide-w) * 1.15)" alt=""><img class="glow" data-shot="task" style="left: calc(var(--slide-w) * 1.15); width: calc(var(--slide-w) * 1)" alt=""><img class="glow" data-shot="done" style="left: calc(var(--slide-w) * 2.15); width: calc(var(--slide-w) * 1)" alt=""><img class="glow" data-shot="memories" style="left: calc(var(--slide-w) * 3.15); width: calc(var(--slide-w) * 1)" alt=""><img class="glow" data-shot="settings" style="left: calc(var(--slide-w) * 4.15); width: calc(var(--slide-w) * 1)" alt=""><img class="glow" data-shot="fact" style="left: calc(var(--slide-w) * 5.15); width: calc(var(--slide-w) * 1.15)" alt=""></div>
+  <div class="field glow-field" style="left: calc(var(--slide-w) * 0); --bg: #f2b441"></div>
+  <div class="field glow-field" style="left: calc(var(--slide-w) * 1); --bg: #f2b441"></div>
+  <div class="field glow-field" style="left: calc(var(--slide-w) * 2); --bg: #f2b441"></div>
+  <div class="field glow-field" style="left: calc(var(--slide-w) * 3); --bg: #f2b441"></div>
+  <div class="field glow-field" style="left: calc(var(--slide-w) * 4); --bg: #f2b441"></div>
+  <div class="field glow-field" style="left: calc(var(--slide-w) * 5); --bg: #f2b441"></div>
+  <div class="device d-hero" style="--i: 0" data-shot="fact">
+  </div>
+  <div class="piece" data-over data-key="41" data-min="22" data-words="24" style="--i: 0; --at-x: 50; --at-y: 50; --size: 84; --rot: 0deg; padding: calc(var(--slide-w) * 0.0000); border-radius: calc(var(--slide-w) * 0.0363)"><div class="zoom" data-shot="fact" data-crop="82 860 1156 790" style="border-radius: calc(var(--slide-w) * 0.0363)"></div></div>
+  <div class="device d-lean after-hero" style="--i: 1" data-shot="task">
+  </div>
+  <div class="piece" data-over data-key="34" data-min="22" data-words="19" style="--i: 1; --at-x: 50; --at-y: 50; --size: 82; --rot: 0deg; padding: calc(var(--slide-w) * 0.0000); border-radius: calc(var(--slide-w) * 0.0315)"><div class="zoom" data-shot="task" data-crop="140 1635 1040 455" style="border-radius: calc(var(--slide-w) * 0.0315)"></div></div>
+  <div class="device d-hang after-lean" style="--i: 2" data-shot="done">
+  </div>
+  <div class="device d-offset after-hang" style="--i: 3" data-shot="memories">
+  </div>
+  <div class="device d-tilt after-offset" style="--i: 4" data-shot="settings">
+  </div>
+  <div class="piece" data-over data-key="39" data-min="25" data-words="4" style="--i: 4; --at-x: 50; --at-y: 50; --size: 84; --rot: 0deg; padding: calc(var(--slide-w) * 0.0000); border-radius: calc(var(--slide-w) * 0.0426)"><div class="zoom" data-shot="settings" data-crop="138 1811 1044 252" style="border-radius: calc(var(--slide-w) * 0.0426)"></div></div>
+  <div class="device d-fan" style="--i: 5; --k: -1; --n: 3" data-shot="task"></div>
+  <div class="device d-fan" style="--i: 5; --k: 0; --n: 3" data-shot="fact"></div>
+  <div class="device d-fan" style="--i: 5; --k: 1; --n: 3" data-shot="done"></div>
+  <section class="slide c-hero" id="garden" style="--bg: #f2b441; --fg: #14161c; --pill-bg: #14161c; --pill-fg: #f2b441; --sub: rgba(20,22,28,.82)">
+    <div class="caption">
+      <h1 data-text="garden.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="garden.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-lean" id="task" style="--bg: #f2b441; --fg: #14161c; --pill-bg: #14161c; --pill-fg: #f2b441; --sub: rgba(20,22,28,.82)">
+    <div class="caption">
+      <h1 data-text="task.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="task.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-hang" id="done" style="--bg: #f2b441; --fg: #14161c; --pill-bg: #14161c; --pill-fg: #f2b441; --sub: rgba(20,22,28,.82)">
+    <div class="caption bottom">
+      <h1 data-text="done.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="done.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-offset" id="memories" style="--bg: #f2b441; --fg: #14161c; --pill-bg: #14161c; --pill-fg: #f2b441; --sub: rgba(20,22,28,.82)">
+    <div class="caption">
+      <h1 data-text="memories.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="memories.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-tilt" id="buddy" style="--bg: #f2b441; --fg: #14161c; --pill-bg: #14161c; --pill-fg: #f2b441; --sub: rgba(20,22,28,.82)">
+    <div class="caption">
+      <h1 data-text="buddy.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="buddy.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-closer with-fan" id="closer" style="--bg: #f2b441; --fg: #14161c; --pill-bg: #14161c; --pill-fg: #f2b441; --sub: rgba(20,22,28,.82)">
+    <img class="closer-icon closer-art" data-asset="sheep" style="" alt="">
+    <div class="caption center">
+      <h1 data-text="closer.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="closer.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

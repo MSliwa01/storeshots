@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- storeshots {"background": "flat", "colours": "one", "frame": "plain/black/22", "rhythm": ["hero", "offset", "hero", "offset", "hero", "offset", "hero", "offset", "hero"]} -->
+<!--
+  Style "collage" (after Structured, Tiimo, Things): a light ground tinted with the brand,
+  the phone in a slim dark frame, and the parts of the screen that matter lifted out and
+  enlarged as cards of their own around it (slides[].pieces), so the UI reads even at
+  search-result size. Two pieces per slide is the norm, three at most; one slide without
+  any keeps the rhythm calm.
+  For: planners, productivity, habits, finance, utilities: apps whose UI is the product.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Nunito; src: url(fonts/Nunito.ttf); font-weight: 200 1000; }
+  {{TOKENS}}
+  :root { --phone-w: calc(var(--u) * 66); --hero-top: 35%; --offset-top: 38%; --lean: 4deg; --hang-top: -14%;
+    --caption-top: calc(var(--u) * 10); --caption-bottom: calc(var(--u) * 9); --ink: #17181c; }
+  body { background: #fff; font-family: Nunito, sans-serif; }
+  /* Light, but clearly the brand: not a pastel wash, a tint with a little depth at the bottom. */
+  .field { background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 16%, white) 0%, color-mix(in srgb, var(--bg) 30%, white) 100%) !important; }
+  .caption { text-align: center; color: var(--ink); inset-inline: calc(var(--u) * 7); }
+  h1 { margin: 0; font-weight: 900; font-size: calc(var(--u) * 10.6); line-height: 1.02; letter-spacing: -.02em; text-wrap: balance; }
+  h1 em { font-style: normal; color: oklch(from var(--bg) min(l, .46) max(c, .12) h); }
+  p { margin: calc(var(--u) * 2.4) auto 0; max-width: 92%; font-weight: 700; font-size: calc(var(--u) * 5.1); line-height: 1.2; color: rgba(23, 24, 28, .75); text-wrap: balance; }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 7) rgba(20, 24, 40, .22)); }
+  /* The phone steps back a little behind its pieces. */
+  .piece { --piece-shadow: 0 0 0 calc(var(--u) * .7) #fff, 0 calc(var(--u) * 2.5) calc(var(--u) * 7) rgba(20, 24, 40, .28); }
+  .pop { --pop-rim: #fff; --pop-rim-width: 7; --pop-radius: calc(var(--u) * 3); --pop-shadow: 0 0 0 calc(var(--u) * .7) #fff, 0 calc(var(--u) * 2.5) calc(var(--u) * 7) rgba(20, 24, 40, .28); }
+  .c-closer .closer-icon { box-shadow: 0 calc(var(--u) * 3) calc(var(--u) * 8) rgba(20, 24, 40, .25); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

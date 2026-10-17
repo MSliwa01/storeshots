@@ -5,6 +5,10 @@
 .caption { position: absolute; inset-inline: calc(var(--u) * 8); top: var(--caption-top, calc(var(--u) * 10)); }
 .caption.bottom { top: auto; bottom: var(--caption-bottom, calc(var(--u) * 10)); }
 .caption.center { text-align: center; }
+/* slides[].caption: "middle" (a slide without a phone: the headline in the middle) and
+   slides[].headline: "huge" (a statement: capitals about 13 % of the slide wide). */
+.caption.middle { top: 50%; translate: 0 -50%; }
+.caption.huge h1 { font-size: calc(var(--u) * 19) !important; line-height: .92 !important; }
 
 .device { position: absolute; z-index: 1; width: var(--phone-w, calc(var(--u) * 80)); }
 /* One phone size for the whole set (3D poses excepted): only position and pose change. */
@@ -18,6 +22,15 @@
    of grazing the neighbour. */
 .d-lean { width: calc(var(--phone-w, calc(var(--u) * 80)) * .9); left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .9) / 2);
   top: calc(var(--slide-h) + var(--u) * 10 - var(--phone-w, calc(var(--u) * 80)) * .9 * 2.0408); rotate: var(--lean, 5deg); } /* still runs off the bottom */
+
+/* Spread (slides[].layout "spread"): one phone across its slide and the next, tilted
+   (--spread-tilt), a little bigger than the set's phone (--spread-scale), its centre
+   --spread-c of a slide left of the seam. Each slide shows its own half; the second half sits
+   --gutter further left (the store's gap between screenshots, about 4.5 % of a slide). */
+.spread-half { position: absolute; top: 0; left: calc(var(--slide-w) * var(--i)); width: var(--slide-w); height: var(--slide-h); overflow: hidden; z-index: 1; }
+.d-spread { --spread-w: calc(var(--phone-w, calc(var(--u) * 80)) * var(--spread-scale, 1.08)); width: var(--spread-w);
+  top: var(--spread-top, 27%); rotate: var(--spread-tilt, 12deg); left: calc(var(--slide-w) * (1 - var(--spread-c, .1)) - var(--spread-w) / 2); }
+.d-spread.twin { left: calc(var(--slide-w) * (0 - var(--spread-c, .1)) - var(--gutter, calc(var(--u) * 4.5)) - var(--spread-w) / 2); }
 
 /* Pop-outs: grow past the bezel (--pop-reach = width as a share of the phone's). */
 .d-hero .pop { --pop-reach: 1.08; }
@@ -49,3 +62,52 @@
 
 /* A slide with a laurel under its caption: its phone starts lower. */
 .device.with-proof:not(.d-hang) { margin-top: calc(var(--u) * 13); }
+
+/* The app's own art (slides[].art). --art-w: width in % of the slide. */
+.art { position: absolute; z-index: 2; width: calc(var(--u) * var(--art-w, 34)); height: auto; pointer-events: none;
+  filter: drop-shadow(0 calc(var(--u) * 1.2) calc(var(--u) * 2.4) rgba(0, 0, 0, .22)); }
+/* beside: over the phone's lower corner, in front of it. */
+.art.a-beside.on-right { left: calc(var(--slide-w) * (var(--i) + 1) - var(--u) * (var(--art-w, 34) + 3)); }
+.art.a-beside.on-left { left: calc(var(--slide-w) * var(--i) + var(--u) * 3); }
+.art.a-beside { bottom: 3%; }
+.art.a-beside.at-hang { bottom: auto; top: 44%; }
+/* peek: behind the phone, looking over its top edge (over its bottom edge on a hanging phone). */
+.art.a-peek { z-index: 0; bottom: calc(100% - var(--hero-top, 32%) - var(--u) * 10); }
+.art.a-peek.at-offset { bottom: calc(100% - var(--offset-top, 33%) - var(--u) * 10); }
+.art.a-peek.at-lean { bottom: calc(100% - 37% - var(--u) * 10); }
+.art.a-peek.at-hang { bottom: auto; top: calc(var(--hang-top, -18%) + var(--phone-w, calc(var(--u) * 80)) * 2.06 - var(--u) * 10); }
+.art.a-peek.on-right { left: calc(var(--slide-w) * var(--i) + var(--slide-w) / 2 + var(--phone-w, calc(var(--u) * 80)) / 2 - var(--u) * (var(--art-w, 40) + 4)); }
+.art.a-peek.on-left { left: calc(var(--slide-w) * var(--i) + var(--slide-w) / 2 - var(--phone-w, calc(var(--u) * 80)) / 2 + var(--u) * 4); }
+/* float: the app's own UI outside the app (a widget, a Live Activity) as a card in front,
+   centred on --at-x/--at-y (% of the slide), lifted by a soft shadow. */
+.art.a-float.behind { z-index: 0; }
+.art.a-float.front { z-index: 3; }
+.art.a-float { left: calc(var(--slide-w) * (var(--i) + var(--at-x) / 100)); top: calc(var(--at-y) * 1%); translate: -50% -50%; z-index: 2;
+  filter: drop-shadow(0 calc(var(--u) * .3) calc(var(--u) * .8) rgba(20, 24, 40, .12)) drop-shadow(0 calc(var(--u) * 2.4) calc(var(--u) * 6) rgba(20, 24, 40, .2)); }
+/* Pieces (slides[].pieces): crops of a capture as cards of their own, centred on --at-x/--at-y
+   (% of the slide), --size wide, in front of the phone. */
+.piece { position: absolute; z-index: 2; box-sizing: border-box; overflow: hidden; width: calc(var(--slide-w) * var(--size) / 100);
+  left: calc(var(--slide-w) * (var(--i) + var(--at-x) / 100)); top: calc(var(--at-y) * 1%); translate: -50% -50%; rotate: var(--rot, 0deg);
+  /* Lifted by a soft shadow in three layers (no outline: top sets almost never draw one). */
+  box-shadow: var(--piece-shadow, 0 calc(var(--u) * .3) calc(var(--u) * .8) rgba(20, 24, 40, .12), 0 calc(var(--u) * 1.6) calc(var(--u) * 4) rgba(20, 24, 40, .16), 0 calc(var(--u) * 5) calc(var(--u) * 12) rgba(20, 24, 40, .2)); }
+/* rim: a thin white rim, for a dark card on a dark phone. */
+.piece.rim { box-shadow: 0 0 0 calc(var(--u) * .7) #fff, var(--piece-shadow, 0 calc(var(--u) * 1.6) calc(var(--u) * 4) rgba(20, 24, 40, .16), 0 calc(var(--u) * 5) calc(var(--u) * 12) rgba(20, 24, 40, .2)); }
+.piece > .zoom { width: 100%; }
+/* backdrop: a scene behind one slide (look.background {asset} spans the strip). */
+.art-backdrop { position: absolute; top: 0; z-index: 0; width: var(--slide-w); height: var(--slide-h); background-size: cover; background-position: center; }
+.backdrop[data-asset] { background-size: cover; background-position: center; }
+/* look.blur: the picture out of focus so the phone and the caption stand out. Blurred with an
+   overscan (--o) that clip-path cuts away, so the edges stay solid at the seams.
+   soft: a light blur everywhere; strong: like atmosphere; caption: a blurred copy over the
+   caption band only, fading out before the phone (at the bottom on a hanging phone). */
+.blurred { --o: calc(var(--u) * 5); clip-path: inset(var(--o)); }
+.art-backdrop.blurred { margin-left: calc(-1 * var(--o)); top: calc(-1 * var(--o)); width: calc(var(--slide-w) + 2 * var(--o)); height: calc(var(--slide-h) + 2 * var(--o)); }
+.backdrop.blurred { inset: calc(-1 * var(--o)); }
+.blurred.soft { filter: blur(calc(var(--u) * .7)); }
+.blurred.strong { filter: blur(calc(var(--u) * 2.4)) saturate(1.1) brightness(1.04); }
+.blurred.caption { filter: blur(calc(var(--u) * 1.6)); -webkit-mask-image: linear-gradient(180deg, #000 24%, transparent 40%); mask-image: linear-gradient(180deg, #000 24%, transparent 40%); }
+.blurred.caption.low { -webkit-mask-image: linear-gradient(0deg, #000 24%, transparent 40%); mask-image: linear-gradient(0deg, #000 24%, transparent 40%); }
+/* closer: the mascot in place of the app icon, sized by height (--art-h, % of the slide). */
+.c-closer .closer-icon.closer-art { width: auto; height: calc(var(--slide-h) * var(--art-h, 30) / 100); left: 50%; translate: -50% 0; aspect-ratio: auto; border-radius: 0; box-shadow: none;
+  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .25)); top: auto; bottom: 44%; }
+.c-closer.with-fan .closer-icon.closer-art { height: calc(var(--slide-h) * var(--art-h, 15) / 100); bottom: auto; top: 6%; }

@@ -74,6 +74,7 @@ body {
 .proof { display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 1.6); margin-top: calc(var(--u) * 3.4); color: inherit; }
 .proof .laurel { width: calc(var(--u) * 6.4); height: calc(var(--u) * 10.6); flex: none; opacity: .9; }
 .proof .laurel.right { transform: scaleX(-1); }
+.caption > .proof:first-child { margin: 0 0 calc(var(--u) * 2.6); }
 .proof-body { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
 .proof-body b { font-size: calc(var(--u) * 5.4); font-weight: 750; letter-spacing: -.01em; white-space: nowrap; }
 .proof-body .stars { font-size: .78em; letter-spacing: .06em; margin-left: .1em; }

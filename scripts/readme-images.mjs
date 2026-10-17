@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Regenerates the README images in docs/images/ from the demo project (fictional app,
+// Regenerates the README images in docs/images/ from the two example projects (real apps,
 // drawn device frame, so they can be published). Run after changing styles or the kit:
-//   node examples/demo/make-captures.mjs && node scripts/readme-images.mjs
+//   node scripts/readme-images.mjs
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,19 +17,24 @@ import { writeStyle } from '../src/styles.mjs';
 const out = join(ROOT, 'docs/images');
 mkdirSync(out, { recursive: true });
 const quiet = () => {};
-const store = loadStore(join(ROOT, 'examples/demo/app'));
 const url = f => pathToFileURL(f).href;
 
-writeStyle(store, undefined);
-const [set] = await render(store, { devices: store.devices, locales: store.locales, log: quiet });
-const slides = set.files.map(f => join(set.dir, f));
+async function build(name) {
+  const store = loadStore(join(ROOT, 'examples', name, 'store'));
+  writeStyle(store, undefined);
+  const [set] = await render(store, { devices: store.devices, locales: store.locales, log: quiet });
+  return { store, set, slides: set.files.map(f => join(set.dir, f)) };
+}
+const bloomling = await build('bloomling'), truesky = await build('truesky');
 
-// Styles: the first three slides in every style.
-const styled = await catalog(store, { axis: 'style', count: 3, log: quiet });
-const variant = name => join(store.paths.out, 'variants', `style-${name}`, 'final', set.device, set.locale);
+// Styles: Bloomling's first three slides in every style.
+const styled = await catalog(bloomling.store, { axis: 'style', count: 3, log: quiet });
+const variant = name => join(bloomling.store.paths.out, 'variants', `style-${name}`, 'final', bloomling.set.device, bloomling.set.locale);
 
-// Pop-outs: the numbered candidates of one slide next to the slide built from the pick.
-const marks = await elements(store, { slides: ['today'], top: 4 });
+// Pop-outs: the numbered candidates of one screen next to the slide built from the pick.
+const marks = await elements(bloomling.store, { slides: ['buddy'], top: 4 });
+const piece = bloomling.store.config.slides.find(s => s.id === 'buddy').pieces[0].box.join();
+const pick = marks.slides[0].candidates.find(c => c.box.join() === piece)?.n ?? 1;
 
 async function shoot(name, html, width) {
   const browser = await launchBrowser();
@@ -54,7 +59,8 @@ async function shoot(name, html, width) {
   }
 }
 
-await shoot('set', `<div class="row" style="padding:48px 40px">${slides.map(f => `<img src="${url(f)}" style="width:280px">`).join('')}</div>`, 1840);
+const row = slides => `<div class="row" style="padding:24px 40px">${slides.map(f => `<img src="${url(f)}" style="width:280px">`).join('')}</div>`;
+await shoot('set', `<div style="padding:24px 0">${row(bloomling.slides)}${row(truesky.slides)}</div>`, 1840);
 
 const names = styled.options.map(o => o.label).filter(n => n !== 'world');
 await shoot('styles', `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:40px 56px;padding:48px 56px">${names.map(n => {
@@ -62,10 +68,10 @@ await shoot('styles', `<div style="display:grid;grid-template-columns:repeat(2,1
   return `<div><div class="row" style="gap:6px">${files.map(f => `<img src="${url(join(variant(n), f))}" style="width:272px;border-radius:16px">`).join('')}</div><div class="cap">${n}</div></div>`;
 }).join('')}</div>`, 1840);
 
-const result = slides.find(f => f.endsWith('-today.png'));
+const result = bloomling.slides.find(f => f.endsWith('-buddy.png'));
 await shoot('pop-outs', `<div class="row" style="padding:44px;align-items:flex-start;gap:40px">
   <div><img src="${url(marks.slides[0].marks)}" style="height:760px;box-shadow:none;border-radius:0"><div class="cap">storeshots elements: candidates, numbered</div></div>
-  <div><img src="${url(result)}" style="height:760px"><div class="cap">--pick 1: the card, cut along its own outline</div></div>
+  <div><img src="${url(result)}" style="height:760px"><div class="cap">the slide made from number ${pick}</div></div>
 </div>`, 1500);
 
 console.error(`docs/images: set.jpg, styles.jpg, pop-outs.jpg`);

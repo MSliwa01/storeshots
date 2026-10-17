@@ -18,12 +18,13 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@rive-app/canvas": "^2.44.2",
     "playwright-core": "^1.55.0"
   },
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "demo": "node examples/demo/make-captures.mjs && node bin/storeshots.mjs build examples/demo/app",
+    "demo": "node bin/storeshots.mjs build examples/bloomling/store && node bin/storeshots.mjs build examples/truesky/store",
     "readme-images": "node scripts/readme-images.mjs"
   },
   "files": [

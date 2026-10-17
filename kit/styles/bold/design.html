@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- storeshots {"background": "flat", "colours": "one", "frame": "plain/white/30", "rhythm": ["hero", "hang", "hero", "hang", "hero", "hang", "hero", "hang", "hero"]} -->
+<!--
+  Style "bold" (after PictureThis, Carrot, Impulse, Simply Piano): one confident, saturated
+  brand colour behind everything, a huge rounded headline in white, and a big phone in a
+  flat white frame that runs off the slide, so the app's UI is readable even in the search
+  results. Accent words sit on a white marker. "colours": "each" turns it into a different
+  strong colour per slide (Waterllama, Duolingo).
+  For: anything that wants to be seen first: utilities, health, learning, games, consumer apps.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="{{LOCALE}}">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Fredoka; src: url(fonts/Fredoka.ttf); font-weight: 300 700; }
+  {{TOKENS}}
+  /* A big phone: 90 % of the slide's width, ~85 % of its height, always running off an edge. */
+  :root { --phone-w: calc(var(--u) * 90); --hero-top: 27%; --offset-top: 27%; --lean: 4deg; --hang-top: -21%;
+    --caption-top: calc(var(--u) * 9); --caption-bottom: calc(var(--u) * 8); }
+  body { background: #222; font-family: Fredoka, sans-serif; }
+  /* The colour stays the colour: no pastel wash, only a slight vignette towards the edges
+     (darker, so white text never loses contrast). */
+  .field { background: radial-gradient(120% 75% at 50% 55%, var(--bg) 40%, color-mix(in srgb, var(--bg) 84%, black) 100%) !important; }
+  /* background: gradient: deeper at both ends, where the captions sit (white text keeps its
+     contrast), with a soft light in the middle where the phone stands. */
+  .field.gradient { background: radial-gradient(75% 30% at 50% 55%, color-mix(in srgb, var(--bg) 78%, white) 0%, transparent 100%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 82%, black) 0%, var(--bg) 35%, var(--bg) 70%, color-mix(in srgb, var(--bg) 85%, black) 100%) !important; }
+  .caption { text-align: center; color: var(--fg); inset-inline: calc(var(--u) * 6); }
+  h1 { margin: 0; font-weight: 700; font-size: calc(var(--u) * 12.4); line-height: 1; letter-spacing: -.01em; text-wrap: balance; }
+  /* The pill is its own box with air above it: an inline background would cover the
+     descenders of the line above (line-height 1). */
+  h1 em { display: inline-block; font-style: normal; color: var(--pill-fg); background: var(--pill-bg); line-height: 1.04; padding: .02em .16em .07em; margin-top: .12em; border-radius: .2em; }
+  p { margin: calc(var(--u) * 2.4) auto 0; max-width: 92%; font-weight: 500; font-size: calc(var(--u) * 5.2); line-height: 1.2; color: var(--fg); text-wrap: balance; }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 8) color-mix(in srgb, var(--bg) 40%, rgba(0, 0, 0, .55))); }
+  /* Pops: white cards lifted off the phone, larger than elsewhere. */
+  .pop { --pop-rim: #fff; --pop-rim-width: 8; --pop-radius: calc(var(--u) * 3); --pop-shadow: 0 0 0 calc(var(--u) * .8) #fff, 0 calc(var(--u) * 3) calc(var(--u) * 9) rgba(0, 0, 0, .3); }
+  .d-hero .pop, .d-hang .pop { --pop-reach: 1.02; }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1.4) #fff, 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, .3); }
+  {{COMPOSITIONS}}
+</style>
+</head>
+<body>
+<div class="strip">
+{{FIELDS}}
+{{DEVICES}}
+{{SLIDES}}
+</div>
+</body>
+</html>

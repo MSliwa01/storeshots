@@ -1,0 +1,9 @@
+{
+  "assets": [
+    { "id": "sunflower", "file": "store/design/art/sunflower.svg", "role": "illustration", "fits": "growth, the garden, beside a phone" },
+    { "id": "sheep", "file": "store/design/art/sheep.svg", "role": "mascot", "fits": "closer, companion slide" },
+    { "id": "dog", "file": "store/design/art/dog.svg", "role": "mascot", "fits": "companion slide" },
+    { "id": "pig", "file": "store/design/art/pig.svg", "role": "mascot", "fits": "companion slide" },
+    { "id": "garden-scene", "file": "store/design/world/garden-scene.jpg", "role": "backdrop", "fits": "the app's garden alone: sky, clouds, sun, green plains" }
+  ]
+}

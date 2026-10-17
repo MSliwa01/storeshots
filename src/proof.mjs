@@ -11,6 +11,10 @@ import { usage } from './errors.mjs';
 
 const RATINGS = { en: 'ratings', pl: 'ocen', de: 'Bewertungen', fr: 'notes', es: 'valoraciones', it: 'valutazioni', pt: 'avaliações', nl: 'beoordelingen', sv: 'betyg', ja: '件の評価', ko: '개 평가' };
 const APPLE_AWARDS = /editor'?s'?\s*choice|app of the (day|year)|game of the (day|year)|apple design award|wybór redakcji|aplikacja dnia/i;
+// Free text that reads as a ranking or an award the app may not have: Apple asks for no
+// "recognition that your app or game hasn't actually received", Google Play for no "Best",
+// "#1", "Top" or "Million Downloads" in screenshots (evals/research/claims.md).
+const RANKING = /(#\s?1\b|\bno\.?\s?1\b|\bnumber one\b|\bbest\b|\btop\b|\baward|\bwinner|\bfeatured\b|\bnajlepsz\w*|\bnumer jeden\b|\bnr\s?1\b|\bnagrod\w*|\bnagrodzon\w*|\bzwycięzc\w*)/i;
 const COUNTRY = { en: 'us', pl: 'pl', de: 'de', fr: 'fr', es: 'es', it: 'it', pt: 'br', nl: 'nl', sv: 'se', ja: 'jp', ko: 'kr' };
 
 /**
@@ -49,6 +53,18 @@ export function proofMarkup(proof, locale = 'en') {
   if (APPLE_AWARDS.test(`${proof.text ?? ''} ${proof.sub ?? ''}`)) throw usage('Apple-designated awards do not belong in screenshots', { fix: 'use the rating, downloads, press or a non-Apple award' });
   const esc = s => String(s).replace(/&(?!\w+;)/g, '&amp;').replace(/<(?!\/?span)/g, '&lt;');
   return `<div class="proof">${branch()}<div class="proof-body"><b>${proof.text ? esc(big) : big}</b>${small ? `<small>${esc(small)}</small>` : ''}</div>${branch().replace('class="laurel"', 'class="laurel right"')}</div>`;
+}
+
+/**
+ * What `check` says about a laurel's own line (look.proof.text and sub). A plain description
+ * ("Calm & cosy") passes on iOS; a ranking or an award must be real and named.
+ */
+export function proofWarnings(proof) {
+  if (!proof?.text) return [];
+  const line = `${proof.text} ${proof.sub ?? ''}`.trim(), out = [];
+  if (RANKING.test(line)) out.push(`look.proof: "${line}" reads as a ranking or an award; show only one the app really has, with its issuer and year (or the real rating: storeshots proof)`);
+  out.push('look.proof: a laurel with your own line suits the App Store; Google Play asks for no accolades in screenshots, so leave it out of the Play set');
+  return out;
 }
 
 /** Slides that carry the laurel: look.proof.slides, default the first. */

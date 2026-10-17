@@ -45,8 +45,21 @@
     }
     for (const s of document.querySelectorAll('.c-closer')) {
       const a = document.createElement('div'); a.className = 'arch';
+      a.dataset.closer = s.id;
       a.style.left = `calc(${s.offsetLeft}px + var(--u) * 8)`;
       strip.insertBefore(a, strip.children[1]);
+    }
+  };
+  // The closer's arch never runs under its words: below the caption behind a fan of phones,
+  // or hanging from the top behind the icon and ending above the caption.
+  window.afterFit = () => {
+    const strip = document.querySelector('.strip').getBoundingClientRect();
+    for (const a of document.querySelectorAll('.arch[data-closer]')) {
+      const s = document.getElementById(a.dataset.closer), cap = s?.querySelector('.caption')?.getBoundingClientRect();
+      if (!cap) continue;
+      const gap = strip.height * 0.035;
+      if (s.classList.contains('with-fan')) Object.assign(a.style, { top: `${cap.bottom - strip.top + gap}px`, height: 'auto' });
+      else Object.assign(a.style, { top: '-6%', bottom: 'auto', height: `${cap.top - strip.top - gap + strip.height * 0.06}px`, borderRadius: '0 0 calc(var(--u) * 42) calc(var(--u) * 42)' });
     }
   };
 </script>

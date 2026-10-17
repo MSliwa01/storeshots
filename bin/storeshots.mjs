@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // storeshots — App Store screenshots from your real app: capture, compose, check, upload.
 import { art } from '../src/art.mjs';
+import { assets } from '../src/assets.mjs';
 import { capture } from '../src/capture.mjs';
+import { cutout } from '../src/cutout.mjs';
 import { AXES, catalog } from '../src/catalog.mjs';
 import { check } from '../src/check.mjs';
 import { doctor } from '../src/doctor.mjs';
 import { elements } from '../src/elements.mjs';
 import { CliError, EXIT, usage } from '../src/errors.mjs';
 import { installFrames } from '../src/frames.mjs';
+import { fontOptions, installAppleFonts } from '../src/fonts.mjs';
 import { init } from '../src/init.mjs';
 import { styles, writeStyle } from '../src/styles.mjs';
 import { board, CURATED, lookup, saveApp, search, topChart } from '../src/refs.mjs';
@@ -17,6 +20,7 @@ import { review } from '../src/review.mjs';
 import { loadStore } from '../src/store.mjs';
 import { importShots } from '../src/import.mjs';
 import { skill } from '../src/skill.mjs';
+import { stock } from '../src/stock.mjs';
 import { upload } from '../src/upload.mjs';
 
 const HELP = `storeshots <command> [store] [options]
@@ -54,8 +58,19 @@ Research and assets
   refs               download top apps' screenshots → references/<country>/<app>/
                      --country us,pl --genres utilities,productivity --kind topfreeapplications --limit 25 --curated
   board              lettered sheet of reference sets from references/   --genres a,b | --apps a,b  --limit 8
+  fonts              caption fonts this machine has (look.font: style, sf-rounded, nunito, fredoka, sf, or {"file"})
+                     --install sf: SF Pro Rounded and Display from Apple, kept on this machine (Apple's licence)
   frames [model]     download Apple's device bezels (iphone-18-pro-max, ipad-pro-13-m5); else "frame": "generic"
-  art                optional generated props from store/art.json (never app UI)   --only ids --variants N
+  assets             the app's own art, fonts and colours: numbered sheets → output/assets/ (then write store/assets.json)
+                     --dir <folder>: one folder (a group on the sheet) in full
+                     --rive <file.riv>: every artboard × animation of a Rive file at a few times, on one sheet
+  stock "<query>"     stock photos for scenes and backdrops, numbered on output/stock/sheet.png (AI-looking ones marked)
+                     --provider unsplash|pexels|pixabay|openverse  --orientation portrait|landscape|square  --n 12
+                     --get <n> [--id name]: download one into design/stock/ and add it to store/assets.json
+  cutout <asset>     cut a photo's subject (a person, a hand, an object) out of its background, on this machine (rembg)
+                     --id name  --crop x,y,w,h (part of the photo first)  --model isnet-general-use|birefnet-general-lite
+  art                optional generated art from store/art.json: mascot poses, props, scenes (never app UI)
+                     --only ids --variants N --dry-run (print the prompts, generate nothing); Codex login or IMAGE_API_KEY
   help               this text
 
 Options
@@ -65,11 +80,12 @@ Options
 
 Exit codes: 0 ok · 1 usage/config · 2 capture/render · 3 check failed · 4 upload · 5 missing tool or credential
 Errors carry {error, fix, next}. Environment: STORESHOTS_HOST, ASC_KEY_ID/ASC_ISSUER_ID/ASC_PRIVATE_KEY_PATH,
-IMAGE_API_BASE/IMAGE_API_KEY, STORESHOTS_BROWSER, STORESHOTS_FRAMES.`;
+IMAGE_API_BASE/IMAGE_API_KEY, STORESHOTS_BROWSER, STORESHOTS_FRAMES, UNSPLASH_ACCESS_KEY/PEXELS_API_KEY/PIXABAY_API_KEY
+(also read from ~/.storeshots/.env).`;
 
 /** argv → { command, positional, flags } with boolean flags and `--name value` pairs. */
 function parse(argv) {
-  const BOOLEAN = new Set(['json', 'confirm', 'yes', 'force', 'curated', 'help']);
+  const BOOLEAN = new Set(['json', 'confirm', 'yes', 'force', 'curated', 'help', 'dry-run']);
   const OPTIONAL = new Set(['install']); // a flag that may or may not take a value
   const [command, ...rest] = argv;
   const positional = [], flags = {};
@@ -93,6 +109,7 @@ async function run({ command, positional, flags }) {
   if (command === 'init') {
     return init(positional[0], { style: flags.style, locale: flags.locale, deviceId: flags.device, shots: list(flags.shots), force: flags.force });
   }
+  if (command === 'fonts') return flags.install ? installAppleFonts() : { fonts: fontOptions() };
   if (command === 'frames') {
     const meta = installFrames(positional[0] ?? 'iphone-18-pro-max');
     return { model: positional[0] ?? 'iphone-18-pro-max', colours: meta };
@@ -123,10 +140,10 @@ async function run({ command, positional, flags }) {
   }
 
   if (command === 'skill') return skill({ install: flags.install });
-  const PROJECT = ['style', 'doctor', 'capture', 'import', 'catalog', 'elements', 'proof', 'render', 'review', 'check', 'build', 'upload', 'art'];
+  const PROJECT = ['stock', 'cutout', 'assets', 'style', 'doctor', 'capture', 'import', 'catalog', 'elements', 'proof', 'render', 'review', 'check', 'build', 'upload', 'art'];
   if (!PROJECT.includes(command)) throw usage(`unknown command "${command}"`, { fix: 'run `storeshots help`' });
   // `catalog <axis> [store]`: the axis comes first.
-  const storeArg = command === 'import' ? flags.store : command === 'catalog' && AXES.includes(positional[0]) ? positional[1] : positional[0];
+  const storeArg = command === 'import' ? flags.store : (command === 'catalog' && AXES.includes(positional[0])) || (command === 'stock' && flags.get == null) || command === 'cutout' ? positional[1] : positional[0];
   const store = command === 'style' ? null : command === 'doctor' && !positional[0] ? tryStore() : loadStore(storeArg, { design: flags.design });
   if (command === 'doctor') {
     const result = await doctor(store);
@@ -158,7 +175,10 @@ async function run({ command, positional, flags }) {
       if (!verdict.ok) throw new CliError('the rendered set fails `storeshots check`', { exit: EXIT.CHECK, detail: verdict.errors.join('\n'), fix: 'fix the errors, rebuild, then upload', next: 'storeshots build' });
       return upload(store, { ...options, version: flags.version, confirm: !!(flags.confirm || flags.yes) });
     }
-    case 'art': return art(store, { only: list(flags.only), variants: flags.variants ? Number(flags.variants) : undefined });
+    case 'stock': return stock(store, { query: flags.get == null ? positional[0] : undefined, provider: flags.provider, orientation: flags.orientation, n: flags.n ?? 12, get: flags.get, id: flags.id });
+    case 'cutout': return cutout(store, { source: positional[0], id: flags.id, crop: flags.crop, model: flags.model });
+    case 'assets': return assets(store, { rive: flags.rive, dir: flags.dir });
+    case 'art': return art(store, { only: list(flags.only), variants: flags.variants ? Number(flags.variants) : undefined, dryRun: !!flags['dry-run'] });
     default: throw usage(`unknown command "${command}"`, { fix: 'run `storeshots help`' });
   }
 }

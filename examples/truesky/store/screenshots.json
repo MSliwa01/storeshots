@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "TrueSky Weather",
+    "subtitle": "Pogoda w malowanym krajobrazie",
+    "icon": "design/icon.png",
+    "searchQuery": "pogoda",
+    "accent": "#5b7fbf"
+  },
+  "locales": ["pl"],
+  "devices": {
+    "iphone-6.9": { "frame": "generic/black" }
+  },
+  "paths": { "raw": "captures" },
+  "shots": {
+    "hero": {}, "golden": {}, "rain": {}, "details": {}, "snow": {}, "scenes": {}, "night": {}
+  },
+  "slides": [
+    { "id": "hero", "shot": "hero", "art": { "asset": "world-fjord", "place": "backdrop" } },
+    { "id": "golden", "shot": "golden", "art": { "asset": "world-meadow", "place": "backdrop" } },
+    { "id": "rain", "shot": "rain", "art": { "asset": "world-meadow", "place": "backdrop" } },
+    { "id": "details", "shot": "details", "art": { "asset": "world-fjord", "place": "backdrop" } },
+    { "id": "snow", "shot": "snow", "art": { "asset": "world-meadow-snow", "place": "backdrop" } },
+    { "id": "scenes", "shot": "scenes", "art": { "asset": "world-meadow", "place": "backdrop" } }
+  ],
+  "look": { "style": "world", "palette": ["#295d99"] }
+}

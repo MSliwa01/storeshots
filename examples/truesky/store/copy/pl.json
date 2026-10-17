@@ -1,0 +1,26 @@
+{
+  "hero": {
+    "title": "Pogoda,\n*która żyje*",
+    "subtitle": "Prognoza jak malowany obraz"
+  },
+  "golden": {
+    "title": "Każda godzina\n*inna*",
+    "subtitle": "Światło zmienia się z porą dnia"
+  },
+  "rain": {
+    "title": "Deszcz\n*na żywo*",
+    "subtitle": "Chmury i opady co do godziny"
+  },
+  "details": {
+    "title": "Cały dzień\n*w skrócie*",
+    "subtitle": "Godziny, tydzień, wiatr, słońce"
+  },
+  "snow": {
+    "title": "Śnieg\n*za oknem*",
+    "subtitle": "Krajobraz zmienia się z pogodą"
+  },
+  "scenes": {
+    "title": "Wybierz\n*swój krajobraz*",
+    "subtitle": "Polana, fiord i paryskie dachy"
+  }
+}

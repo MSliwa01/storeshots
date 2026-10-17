@@ -1,0 +1,205 @@
+<!doctype html>
+<!-- storeshots {"background": "gradient", "colours": "one", "frame": "plain/white/26", "rhythm": ["hero", "lean", "hero", "offset", "lean", "hero", "offset", "lean", "hero"]} -->
+<!--
+  Style "world" (after Finch, Weatherly, Alto's Odyssey): the app's own world is the ground,
+  its painted landscape, its garden, its space, with the phones standing in it and the app's
+  characters around them. The headline sits on the calm part of the scene (the sky) over a
+  soft scrim in the slide colour, so set the palette to the colour of that sky.
+  The world comes from look.background {asset} (one panorama across the strip) or a
+  backdrop per slide (slides[].art with "place": "backdrop"); without one, a sky gradient of
+  the slide colour stands in. Characters: slides[].art beside or peeking over the phone.
+  For: games, weather, self-care with a character, kids: any app with a world of its own.
+  Compositions: kit/styles/compositions.css.
+-->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Nunito; src: url(fonts/Nunito.ttf); font-weight: 200 1000; }
+  :root { --brand: #5b7fbf; --hue: 218; --deep: hsl(218 34% 11%); --deep-2: hsl(236 31% 17%); --mid: hsl(218 36% 30%); --glow-a: hsl(218 92% 58%); --glow-b: hsl(273 88% 62%); --glow-c: hsl(173 85% 58%); --accent-on-dark: hsl(218 88% 74%); --accent-on-light: hsl(218 55% 28%); --paper: hsl(218 22% 94%); --paper-2: hsl(243 28% 89%); --ink: hsl(218 35% 11%); --vivid: hsl(218 70% 46%); --vivid-2: hsl(246 70% 50%); --vivid-3: hsl(190 70% 44%); --slides: 6; }
+  /* A phone big enough to read but lower than in bold, so the world shows above and beside it. */
+  :root { --phone-w: calc(var(--u) * 76); --hero-top: 31%; --offset-top: 35%; --lean: 4deg; --hang-top: -16%;
+    --caption-top: calc(var(--u) * 10); --caption-bottom: calc(var(--u) * 9); }
+  body { background: #fff; font-family: Nunito, sans-serif; }
+  /* No world given: a plain sky of the slide colour, lighter towards the horizon. */
+  .field.gradient { background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 55%, white) 100%); }
+  /* The scrim: the sky colour behind the caption, fading out before the phone. */
+  .slide::before { content: ""; position: absolute; z-index: -1; inset-inline: 0; top: 0; height: 34%; pointer-events: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 78%, transparent) 0%, color-mix(in srgb, var(--bg) 50%, transparent) 55%, transparent 100%); }
+  .slide.c-hang::before, .slide.zoom-low::before { top: auto; bottom: 0; height: 36%; background: linear-gradient(0deg, color-mix(in srgb, var(--bg) 82%, transparent) 0%, color-mix(in srgb, var(--bg) 55%, transparent) 55%, transparent 100%); }
+  .slide.c-closer::after { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none;
+    background: radial-gradient(70% 40% at 50% 62%, color-mix(in srgb, var(--bg) 70%, transparent), transparent); }
+  .caption { text-align: center; color: var(--fg); inset-inline: calc(var(--u) * 7); }
+  h1 { margin: 0; font-weight: 900; font-size: calc(var(--u) * 11); line-height: 1.02; letter-spacing: -.015em; text-wrap: balance;
+    text-shadow: 0 calc(var(--u) * .3) calc(var(--u) * 3) color-mix(in srgb, var(--bg) 70%, transparent); }
+  /* Its own box with air above it, so it never covers the descenders of the line above. */
+  h1 em { display: inline-block; font-style: normal; color: var(--pill-fg); background: var(--pill-bg); line-height: 1.04; padding: .02em .14em .07em; margin-top: .12em; border-radius: .22em; text-shadow: none; }
+  p { margin: calc(var(--u) * 2.4) auto 0; max-width: 92%; font-weight: 700; font-size: calc(var(--u) * 5); line-height: 1.2; color: var(--fg); text-wrap: balance;
+    text-shadow: 0 0 calc(var(--u) * 2.5) color-mix(in srgb, var(--bg) 80%, transparent); }
+
+  .device { filter: drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 7) rgba(0, 0, 0, .3)); }
+  .pop { --pop-rim: #fff; --pop-rim-width: 8; --pop-radius: calc(var(--u) * 3); --pop-shadow: 0 0 0 calc(var(--u) * .8) #fff, 0 calc(var(--u) * 3) calc(var(--u) * 9) rgba(0, 0, 0, .28); }
+  /* Characters stand in front of the phone, on the ground of the world. */
+  .art { z-index: 2; filter: drop-shadow(0 calc(var(--u) * 1.5) calc(var(--u) * 2.5) rgba(0, 0, 0, .25)); }
+  .c-closer .closer-icon { box-shadow: 0 0 0 calc(var(--u) * 1.4) #fff, 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, .3); }
+  .c-closer .closer-icon.closer-art { box-shadow: none; filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .25)); }
+  /* Shared compositions, inlined into every style. Units: --u = 1 % of the slide width.
+   A device's slide index is --i; styles tune --phone-w, --hero-top, --lean, --hang-top,
+   --caption-top, --caption-bottom. Every phone stays inside its own slide. */
+.slide { z-index: 3; }
+.caption { position: absolute; inset-inline: calc(var(--u) * 8); top: var(--caption-top, calc(var(--u) * 10)); }
+.caption.bottom { top: auto; bottom: var(--caption-bottom, calc(var(--u) * 10)); }
+.caption.center { text-align: center; }
+
+.device { position: absolute; z-index: 1; width: var(--phone-w, calc(var(--u) * 80)); }
+/* One phone size for the whole set (3D poses excepted): only position and pose change. */
+.d-hero, .d-hang, .d-offset { left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80))) / 2); }
+.d-hero { top: var(--hero-top, 32%); }
+.d-offset { top: var(--offset-top, 33%); }
+.d-hang { top: var(--hang-top, -18%); }
+/* Lean: the same phone, centred and tilted (--lean); its empty corners mirror each other. */
+/* A tilt widens the phone by its height × sin(angle), so the tilted phone is a little smaller
+   (90 %) and tilted gently (5°): its corners keep a clear margin from both slide edges instead
+   of grazing the neighbour. */
+.d-lean { width: calc(var(--phone-w, calc(var(--u) * 80)) * .9); left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .9) / 2);
+  top: calc(var(--slide-h) + var(--u) * 10 - var(--phone-w, calc(var(--u) * 80)) * .9 * 2.0408); rotate: var(--lean, 5deg); } /* still runs off the bottom */
+
+/* Pop-outs: grow past the bezel (--pop-reach = width as a share of the phone's). */
+.d-hero .pop { --pop-reach: 1.08; }
+.d-hang .pop { --pop-reach: 1.08; }
+.d-offset .pop { --pop-reach: 1.1; }
+.d-lean .pop { --pop-reach: 1.04; }
+
+/* Closer with a fan: the icon and the line at the top, the set's screens below as small
+   phones in an arc (centre one in front), running off the bottom edge. */
+.c-closer.with-fan .closer-icon { top: 10%; left: calc(50% - var(--u) * 13); width: calc(var(--u) * 26); }
+.c-closer.with-fan .caption { top: 24%; }
+.d-fan { width: calc(var(--u) * 42); left: calc(var(--slide-w) * var(--i) + var(--u) * (29 + var(--k) * 25));
+  top: calc(58% + var(--u) * 7 * var(--k) * var(--k)); rotate: calc(var(--k) * 5deg); z-index: calc(10 - var(--k) * var(--k));
+  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .28)); }
+
+/* Closer: no phone, the app icon and one statement. */
+.c-closer .closer-icon { position: absolute; left: calc(50% - var(--u) * 21); top: 31%; width: calc(var(--u) * 42); aspect-ratio: 1; border-radius: 22.5%;
+  box-shadow: 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, .35); }
+.c-closer .caption { top: 58%; }
+
+/* 3D: a camera on the phone, real thickness (--depth), pops lifted along z.
+   tilt: turned towards the caption; lay: lying on the slide, seen from above. */
+.d-tilt { --depth: .1; left: calc(var(--slide-w) * var(--i) + (var(--slide-w) - var(--phone-w, calc(var(--u) * 80)) * .92) / 2); top: var(--tilt-top, 29%);
+  width: calc(var(--phone-w, calc(var(--u) * 80)) * .92); transform: perspective(calc(var(--u) * 520)) rotateY(var(--tilt-y, -26deg)) rotateX(var(--tilt-x, 10deg)) rotateZ(var(--tilt-z, -3deg)); }
+.d-tilt .pop { --pop-reach: 1; --pop-z: calc(var(--u) * 6); }
+.d-lay { --depth: .1; --shadow-y: 0; left: calc(var(--slide-w) * var(--i) + var(--u) * 17); top: var(--lay-top, 25%); width: calc(var(--phone-w, calc(var(--u) * 80)) * .82);
+  transform: perspective(calc(var(--u) * 520)) rotateX(var(--lay-x, 34deg)) rotateZ(var(--lay-z, -4deg)); transform-origin: 50% 0; }
+.d-lay .pop { --pop-reach: 1.02; --pop-z: calc(var(--u) * 16); }
+
+/* A slide with a laurel under its caption: its phone starts lower. */
+.device.with-proof:not(.d-hang) { margin-top: calc(var(--u) * 13); }
+
+/* The app's own art (slides[].art). --art-w: width in % of the slide. */
+.art { position: absolute; z-index: 2; width: calc(var(--u) * var(--art-w, 34)); height: auto; pointer-events: none;
+  filter: drop-shadow(0 calc(var(--u) * 1.2) calc(var(--u) * 2.4) rgba(0, 0, 0, .22)); }
+/* beside: over the phone's lower corner, in front of it. */
+.art.a-beside.on-right { left: calc(var(--slide-w) * (var(--i) + 1) - var(--u) * (var(--art-w, 34) + 3)); }
+.art.a-beside.on-left { left: calc(var(--slide-w) * var(--i) + var(--u) * 3); }
+.art.a-beside { bottom: 3%; }
+.art.a-beside.at-hang { bottom: auto; top: 44%; }
+/* peek: behind the phone, looking over its top edge (over its bottom edge on a hanging phone). */
+.art.a-peek { z-index: 0; bottom: calc(100% - var(--hero-top, 32%) - var(--u) * 10); }
+.art.a-peek.at-offset { bottom: calc(100% - var(--offset-top, 33%) - var(--u) * 10); }
+.art.a-peek.at-lean { bottom: calc(100% - 37% - var(--u) * 10); }
+.art.a-peek.at-hang { bottom: auto; top: calc(var(--hang-top, -18%) + var(--phone-w, calc(var(--u) * 80)) * 2.06 - var(--u) * 10); }
+.art.a-peek.on-right { left: calc(var(--slide-w) * var(--i) + var(--slide-w) / 2 + var(--phone-w, calc(var(--u) * 80)) / 2 - var(--u) * (var(--art-w, 40) + 4)); }
+.art.a-peek.on-left { left: calc(var(--slide-w) * var(--i) + var(--slide-w) / 2 - var(--phone-w, calc(var(--u) * 80)) / 2 + var(--u) * 4); }
+/* Pieces (slides[].pieces): crops of a capture as cards of their own, centred on --at-x/--at-y
+   (% of the slide), --size wide, in front of the phone. */
+.piece { position: absolute; z-index: 2; box-sizing: border-box; overflow: hidden; width: calc(var(--slide-w) * var(--size) / 100);
+  left: calc(var(--slide-w) * (var(--i) + var(--at-x) / 100)); top: calc(var(--at-y) * 1%); translate: -50% -50%; rotate: var(--rot, 0deg);
+  /* A thin white rim: a dark card on a dark phone still reads as lifted. */
+  box-shadow: var(--piece-shadow, 0 0 0 calc(var(--u) * .7) #fff, 0 calc(var(--u) * 2.5) calc(var(--u) * 7) rgba(20, 24, 40, .3)); }
+.piece > .zoom { width: 100%; }
+/* backdrop: a scene behind one slide (look.background {asset} spans the strip). */
+.art-backdrop { position: absolute; top: 0; z-index: 0; width: var(--slide-w); height: var(--slide-h); background-size: cover; background-position: center; }
+.backdrop[data-asset] { background-size: cover; background-position: center; }
+/* look.blur: the picture out of focus so the phone and the caption stand out. Blurred with an
+   overscan (--o) that clip-path cuts away, so the edges stay solid at the seams.
+   soft: a light blur everywhere; strong: like atmosphere; caption: a blurred copy over the
+   caption band only, fading out before the phone (at the bottom on a hanging phone). */
+.blurred { --o: calc(var(--u) * 5); clip-path: inset(var(--o)); }
+.art-backdrop.blurred { margin-left: calc(-1 * var(--o)); top: calc(-1 * var(--o)); width: calc(var(--slide-w) + 2 * var(--o)); height: calc(var(--slide-h) + 2 * var(--o)); }
+.backdrop.blurred { inset: calc(-1 * var(--o)); }
+.blurred.soft { filter: blur(calc(var(--u) * .7)); }
+.blurred.strong { filter: blur(calc(var(--u) * 2.4)) saturate(1.1) brightness(1.04); }
+.blurred.caption { filter: blur(calc(var(--u) * 1.6)); -webkit-mask-image: linear-gradient(180deg, #000 24%, transparent 40%); mask-image: linear-gradient(180deg, #000 24%, transparent 40%); }
+.blurred.caption.low { -webkit-mask-image: linear-gradient(0deg, #000 24%, transparent 40%); mask-image: linear-gradient(0deg, #000 24%, transparent 40%); }
+/* closer: the mascot in place of the app icon, sized by height (--art-h, % of the slide). */
+.c-closer .closer-icon.closer-art { width: auto; height: calc(var(--slide-h) * var(--art-h, 30) / 100); left: 50%; translate: -50% 0; aspect-ratio: auto; border-radius: 0; box-shadow: none;
+  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, .25)); top: auto; bottom: 44%; }
+.c-closer.with-fan .closer-icon.closer-art { height: calc(var(--slide-h) * var(--art-h, 15) / 100); bottom: auto; top: 6%; }
+
+</style>
+</head>
+<body>
+<div class="strip">
+  <div class="field gradient" style="left: calc(var(--slide-w) * 0); --bg: #295d99"></div>
+  <div class="field gradient" style="left: calc(var(--slide-w) * 1); --bg: #295d99"></div>
+  <div class="field gradient" style="left: calc(var(--slide-w) * 2); --bg: #295d99"></div>
+  <div class="field gradient" style="left: calc(var(--slide-w) * 3); --bg: #295d99"></div>
+  <div class="field gradient" style="left: calc(var(--slide-w) * 4); --bg: #295d99"></div>
+  <div class="field gradient" style="left: calc(var(--slide-w) * 5); --bg: #295d99"></div>
+  <div class="art-backdrop" data-asset="world-fjord" style="left: calc(var(--slide-w) * 0)"></div>
+  <div class="art-backdrop" data-asset="world-meadow" style="left: calc(var(--slide-w) * 1)"></div>
+  <div class="art-backdrop" data-asset="world-meadow" style="left: calc(var(--slide-w) * 2)"></div>
+  <div class="art-backdrop" data-asset="world-fjord" style="left: calc(var(--slide-w) * 3)"></div>
+  <div class="art-backdrop" data-asset="world-meadow-snow" style="left: calc(var(--slide-w) * 4)"></div>
+  <div class="art-backdrop" data-asset="world-meadow" style="left: calc(var(--slide-w) * 5)"></div>
+  <div data-frame="plain/white/26" class="device d-hero" style="--i: 0" data-shot="hero">
+  </div>
+  <div data-frame="plain/white/26" class="device d-lean after-hero" style="--i: 1" data-shot="golden">
+  </div>
+  <div data-frame="plain/white/26" class="device d-hero after-lean" style="--i: 2" data-shot="rain">
+  </div>
+  <div data-frame="plain/white/26" class="device d-offset after-hero" style="--i: 3" data-shot="details">
+  </div>
+  <div data-frame="plain/white/26" class="device d-lean after-offset" style="--i: 4" data-shot="snow">
+  </div>
+  <div data-frame="plain/white/26" class="device d-hero after-lean" style="--i: 5" data-shot="scenes">
+  </div>
+  <section class="slide c-hero" id="hero" style="--bg: #295d99; --fg: #ffffff; --pill-bg: #ffffff; --pill-fg: #295d99; --sub: rgba(255,255,255,.92)">
+    <div class="caption">
+      <h1 data-text="hero.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="hero.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-lean" id="golden" style="--bg: #295d99; --fg: #ffffff; --pill-bg: #ffffff; --pill-fg: #295d99; --sub: rgba(255,255,255,.92)">
+    <div class="caption">
+      <h1 data-text="golden.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="golden.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-hero" id="rain" style="--bg: #295d99; --fg: #ffffff; --pill-bg: #ffffff; --pill-fg: #295d99; --sub: rgba(255,255,255,.92)">
+    <div class="caption">
+      <h1 data-text="rain.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="rain.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-offset" id="details" style="--bg: #295d99; --fg: #ffffff; --pill-bg: #ffffff; --pill-fg: #295d99; --sub: rgba(255,255,255,.92)">
+    <div class="caption">
+      <h1 data-text="details.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="details.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-lean" id="snow" style="--bg: #295d99; --fg: #ffffff; --pill-bg: #ffffff; --pill-fg: #295d99; --sub: rgba(255,255,255,.92)">
+    <div class="caption">
+      <h1 data-text="snow.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="snow.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+  <section class="slide c-hero" id="scenes" style="--bg: #295d99; --fg: #ffffff; --pill-bg: #ffffff; --pill-fg: #295d99; --sub: rgba(255,255,255,.92)">
+    <div class="caption">
+      <h1 data-text="scenes.title" data-fit data-role="title" data-lines="2"></h1>
+      <p data-text="scenes.subtitle" data-role="sub"></p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

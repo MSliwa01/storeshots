@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { measureBezel } from '../src/frames.mjs';
+import { measureBezel, plainFrame } from '../src/frames.mjs';
 import { png, tmp } from './helpers.mjs';
 
 test('measureBezel finds the transparent screen opening and its corner radius', () => {
@@ -18,4 +18,14 @@ test('measureBezel finds the transparent screen opening and its corner radius', 
   const m = measureBezel(file);
   assert.deepEqual({ ...m.screen, radius: undefined }, { x: 20, y: 30, width: 160, height: 340, radius: undefined });
   assert.ok(Math.abs(m.screen.radius - hole.r) <= 1, `radius ${m.screen.radius}`);
+});
+
+test('plainFrame draws an even border around the screen, and "none" just the screen', () => {
+  const device = { width: 1320, height: 2868 };
+  const plain = plainFrame(device, 'plain/ff5a36/50');
+  assert.deepEqual(plain.screen, { x: 66, y: 66, width: 1320, height: 2868, radius: 198 });
+  assert.equal(plain.width, 1320 + 132);
+  assert.match(Buffer.from(plain.url.split(',')[1], 'base64').toString(), /fill="#ff5a36"/);
+  const none = plainFrame(device, 'none');
+  assert.deepEqual([none.width, none.height, none.screen.x], [1320, 2868, 0]);
 });

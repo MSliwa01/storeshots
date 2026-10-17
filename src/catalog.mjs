@@ -8,6 +8,7 @@
 //   colours   one colour for the set vs a colour per slide            → look.colours
 //   accent    no accent slide vs a contrasting middle slide           → look.accent
 //   background (style-dependent) flat, gradient, glow                 → look.background
+//   font      the style's own type vs rounded faces (installed ones)  → look.font
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -15,15 +16,18 @@ import { usage } from './errors.mjs';
 import { render } from './render.mjs';
 import { loadStore } from './store.mjs';
 import { buildDesign, copyStyleFonts, lookOf, slidesOf, styles } from './styles.mjs';
+import { fontOptions } from './fonts.mjs';
+import { resolve } from 'node:path';
 
 const LAYOUTS = ['hero', 'lean', 'hang', 'offset', 'tilt', 'lay'];
-export const AXES = ['style', 'layout', 'colours', 'accent', 'background', 'world']; // world: old name of style
+export const AXES = ['style', 'layout', 'colours', 'accent', 'background', 'font', 'world']; // world: old name of style
 
 function options(axis, store, look, slideId) {
   if (axis === 'style' || axis === 'world') return styles().map(w => ({ label: w, world: w, look: {} }));
   if (axis === 'layout') return LAYOUTS.map(l => ({ label: l, world: look.world, look: {}, layout: { [slideId]: l } }));
   if (axis === 'colours') return ['one', 'each'].map(c => ({ label: c === 'one' ? 'one colour' : 'colour per slide', world: look.world, look: { colours: c }, value: c }));
   if (axis === 'accent') return [false, true].map(a => ({ label: a ? 'accent slide' : 'no accent', world: look.world, look: { accent: a }, value: a }));
+  if (axis === 'font') return fontOptions().filter(f => f.available).map(f => ({ label: f.name, world: look.world, look: { font: f.name }, value: f.name }));
   if (axis === 'background') return ['flat', 'gradient', 'glow'].map(b => ({ label: b, world: look.world, look: { background: b }, value: b }));
   throw usage(`unknown axis "${axis}"`, { fix: `axes: ${AXES.join(', ')}` });
 }
@@ -91,7 +95,7 @@ export async function catalog(store, { axis = 'style', slides: only, pick, count
     const lk = { ...lookOf(store.config, o.world), ...o.look };
     copyStyleFonts(o.world, dir);
     const file = join(dir, `${name}.html`);
-    const html = buildDesign(o.world, { slides, accent: lk.brand, palette: lk.palette, look: lk, locale, screenHeight, designDir: dir });
+    const html = buildDesign(o.world, { slides, accent: lk.brand, palette: lk.palette, look: lk, locale, screenHeight, designDir: dir, appRoot: resolve(store.dir, store.config.app?.root ?? '..') });
     writeFileSync(file, html);
     const variant = loadStore(store.dir, { design: file });
     log(`catalog ${axis}: ${i + 1}/${opts.length} ${o.label}`);

@@ -14,10 +14,12 @@
 // the headline (set-of-marks prompting).
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { usage } from './errors.mjs';
 import { decodePng } from './png.mjs';
+import { ocr, textStats } from './ocr.mjs';
 
 const TOLERANCE = 7;          // per channel, against the region's first pixel
 const STATUS_BAR = 0.068;     // of the screen height
@@ -140,26 +142,7 @@ function windows(list, H, maxUnits = 3) {
   return out;
 }
 
-// ---- OCR (optional) -------------------------------------------------------------------
-const TESS_LANG = { en: 'eng', pl: 'pol', de: 'deu', fr: 'fra', es: 'spa', it: 'ita', pt: 'por', nl: 'nld', sv: 'swe', da: 'dan', nb: 'nor', fi: 'fin', cs: 'ces', sk: 'slk', hu: 'hun', ro: 'ron', tr: 'tur', ru: 'rus', uk: 'ukr', ja: 'jpn', ko: 'kor', zh: 'chi_sim' };
-let installedLangs;
-export function ocrLanguages() {
-  if (installedLangs === undefined) {
-    try { installedLangs = execFileSync('tesseract', ['--list-langs'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).split('\n').slice(1).map(s => s.trim()).filter(Boolean); }
-    catch { installedLangs = null; }
-  }
-  return installedLangs;
-}
-
-/** Words with boxes, or null without tesseract. */
-export function ocr(file, locale = 'en') {
-  const langs = ocrLanguages();
-  if (!langs) return null;
-  const wanted = [TESS_LANG[locale.split(/[-_]/)[0]], 'eng'].filter((l, i, a) => l && langs.includes(l) && a.indexOf(l) === i);
-  const tsv = execFileSync('tesseract', [file, 'stdout', '--psm', '11', '-l', wanted.join('+') || 'eng', 'tsv'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 32 << 20 });
-  return tsv.split('\n').slice(1).map(line => line.split('\t')).filter(c => c.length >= 12 && Number(c[10]) > 40 && c[11].trim())
-    .map(c => ({ text: c[11].trim(), box: [Number(c[6]), Number(c[7]), Number(c[8]), Number(c[9])] }));
-}
+export { ocr, ocrLanguages } from './ocr.mjs';
 
 const fold = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
 /** Comparable stems of the copy: words of 3+ letters (first 5 letters) and numbers. */
@@ -310,6 +293,12 @@ export function findElements(image, { copy, words } = {}) {
     let score = 0.3 * sSize + 0.2 * sColour + 0.15 * sDetail + 0.1 * sPos + 0.25 * sFirst;
     if (words) score = 0.85 * score + 0.15 * Math.min(1, big);
     if (sText !== null) score = 0.7 * score + 0.3 * sText;
+    // Readable once lifted: at most 92 % of the slide wide, its biggest line should reach 3 % of
+    // the slide's width (capitals) and it should hold one thing, not a paragraph.
+    const lift = words ? textStats(own) : null;
+    const liftKey = lift ? Math.round((lift.key * 92) / w * 10) / 10 : null;
+    if (liftKey != null && liftKey < 3) { score *= 0.6; why.push(`small text (${liftKey} % at most)`); }
+    if (lift?.words > 15) { score *= 0.75; why.push(`${lift.words} words`); }
     if (clipped) score *= 0.35;
     if (under > 0) score *= 0.5;
     if (it.kind === 'chip') score *= 0.75;
@@ -317,7 +306,7 @@ export function findElements(image, { copy, words } = {}) {
     // for a surface, what the kit keys out to cut the element's exact silhouette).
     const behind = it.cut === 'frame' ? it.behindFill : (it.parent?.fill ?? page);
     const cut = it.cut === 'frame' ? { cut: 'frame', pad: it.pad } : { cut: 'surface', fill: hex(it.fill) };
-    scored.push({ box: it.box, radius: it.radius, behind: hex(behind), ...cut, kind: it.kind, ...(it.members ? { members: it.members } : {}), score: Math.round(score * 100) / 100, why, ...(text !== undefined ? { text } : {}) });
+    scored.push({ box: it.box, radius: it.radius, behind: hex(behind), ...cut, kind: it.kind, ...(it.members ? { members: it.members } : {}), score: Math.round(score * 100) / 100, why, ...(text !== undefined ? { text } : {}), ...(lift ? { lift: { key: lift.key, min: lift.min, words: lift.words } } : {}) });
   }
   // Near-duplicates (a pair equal to one card, a row equal to its card): keep the better one.
   scored.sort((a, b) => b.score - a.score);
@@ -327,8 +316,17 @@ export function findElements(image, { copy, words } = {}) {
   return kept.map((c, i) => ({ n: i + 1, ...c }));
 }
 
+/** A JPEG capture as a temporary PNG (ffmpeg), for the PNG decoder. */
+function asPng(file) {
+  const out = join(tmpdir(), `storeshots-capture-${process.pid}.png`);
+  try { execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', file, out]); } catch {
+    throw usage(`cannot read the JPEG capture ${file}`, { fix: 'install ffmpeg, or save the capture as PNG' });
+  }
+  return out;
+}
+
 export function findElementsInFile(file, options = {}) {
-  const image = decodePng(readFileSync(file));
+  const image = decodePng(readFileSync(/\.jpe?g$/i.test(file) ? asPng(file) : file));
   const words = options.ocr === false ? null : ocr(file, options.locale);
   return { width: image.width, height: image.height, ocr: !!words, elements: findElements(image, { copy: options.copy, words }) };
 }
@@ -399,7 +397,7 @@ export async function elements(store, { slides: only, pick, locale, device, mark
 
   const entries = [];
   for (const slide of chosen) {
-    const file = store.rawShot(deviceId, lang, slide.shot);
+    const file = store.shotFile(deviceId, lang, slide.shot);
     if (!existsSync(file)) throw usage(`no capture for shot "${slide.shot}" (${deviceId}/${lang})`, { fix: 'capture it first', next: `storeshots capture --shots ${slide.shot}` });
     const found = findElementsInFile(file, { copy: copy[slide.id], locale: lang });
     const current = popBox(slide.pop);
@@ -430,7 +428,7 @@ export async function elements(store, { slides: only, pick, locale, device, mark
   return {
     device: deviceId, locale: lang, ocr: entries.some(e => e.ocr), marks: sheet,
     slides: entries.map(e => ({ slide: e.slide, shot: e.shot, title: e.title, marks: e.marks, current: e.elements.find(x => x.current)?.n ?? null,
-      candidates: e.elements.slice(0, 8).map(({ n, box, radius, behind, cut, pad, kind, score, why, text }) => ({ n, box, radius, behind, cut, ...(pad ? { pad } : {}), kind, score, why, ...(text ? { text: text.slice(0, 80) } : {}) })) })),
+      candidates: e.elements.slice(0, 8).map(({ n, box, radius, behind, cut, pad, kind, score, why, text, lift }) => ({ n, box, radius, behind, cut, ...(pad ? { pad } : {}), kind, score, why, ...(text ? { text: text.slice(0, 80) } : {}), ...(lift ? { lift } : {}) })) })),
     next: 'open the marks image, pick the element that proves each headline: storeshots elements --slides <id> --pick <n> (or --pick best)',
   };
 }

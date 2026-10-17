@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { proof, proofMarkup, proofSlides } from '../src/proof.mjs';
+import { proof, proofMarkup, proofSlides, proofWarnings } from '../src/proof.mjs';
 import { buildDesign } from '../src/styles.mjs';
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,6 +18,16 @@ test('proof: rating in the locale, nothing without a real number', () => {
 
 test('proof: refuses Apple-designated awards', () => {
   assert.throws(() => proofMarkup({ text: "Editors' Choice" }, 'en'), /Apple-designated/);
+});
+
+test('proof: a ranking or an award in your own line is flagged, a description is not', () => {
+  assert.match(proofWarnings({ text: 'Best habit app' })[0], /ranking or an award/);
+  assert.match(proofWarnings({ text: 'Najlepsza', sub: 'aplikacja pogodowa' })[0], /ranking or an award/);
+  assert.match(proofWarnings({ text: 'Award-winning' })[0], /ranking or an award/);
+  const plain = proofWarnings({ text: 'Calm & cosy', sub: 'good news, every day' });
+  assert.equal(plain.length, 1);
+  assert.match(plain[0], /Google Play/);
+  assert.deepEqual(proofWarnings({ rating: 4.8, count: 2300 }), []);
 });
 
 test('proof: the laurel goes on the chosen slide and lowers its phone', () => {

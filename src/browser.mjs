@@ -21,7 +21,7 @@ export async function launchBrowser() {
     }
   }
   throw envError('no Chromium-based browser found', {
-    fix: 'install Google Chrome, or run `npx playwright-core install chromium`, or set STORESHOTS_BROWSER=/path/to/chrome',
+    fix: 'install Google Chrome, or run `npx playwright install chromium`, or set STORESHOTS_BROWSER=/path/to/chrome',
     detail: failures.join('\n'),
   });
 }
