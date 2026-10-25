@@ -95,7 +95,8 @@ store/
   brief.md            audience, benefits, story, decisions
   copy/<locale>.json  headline and subtitle per slide
   design/<style>.html the set as one page (written by `storeshots style`, editable)
-  output/             raw/, final/, review/, elements/, catalog/ (gitignored)
+  events/<id>/        event.json and media of an In-App Event
+  output/             raw/, final/, video/, review/, elements/, catalog/ (gitignored)
 ```
 
 ## Commands
@@ -108,7 +109,9 @@ store/
 | `capture`, `import`, `elements` | get the screens, pick what pops out |
 | `style`, `catalog`, `proof` | write the design, compare options, add the App Store rating |
 | `render`, `review`, `check`, `build` | output, review sheets, rules |
-| `upload` | App Store Connect |
+| `video` | app previews, header and search videos, rendered frame by frame from a design, with CSS animations and screen recordings |
+| `upload` | screenshots and app previews to App Store Connect |
+| `creative`, `event` | the product page header and search results asset (iOS 27), In-App Events |
 | `refs`, `board`, `frames`, `art` | reference sets from the App Store, Apple bezels, optional generated art (new mascot poses, through the Codex CLI or an images API) |
 | `assets`, `stock`, `cutout` | the app's own art, stock photos with their credits, a photo's subject cut out of its background (with rembg, on your machine) |
 
@@ -118,6 +121,8 @@ store/
 - **Reference screenshots.** `refs` downloads other apps' App Store screenshots into a local library for study. They belong to their publishers: keep them local, don't commit or redistribute them.
 - **Fonts.** The bundled fonts are under the SIL Open Font License. The licence files sit next to them.
 - **Status.** iPhone 6.9" is tested end to end. iPad 13" is wired but untested. Google Play is not supported yet.
+- **iPhone Duo.** `iphone-duo-outer` (portrait) and `iphone-duo-inner` (landscape) render and upload. Both go into one `APP_IPHONE_DUO` set of up to 10 screenshots. Capture each display in the Simulator by hand and bring it in with `storeshots import --device <id>`; see [configuration](docs/configuration.md#capture).
+- **The rest of the product page.** `video` renders a design to H.264 frame by frame: CSS animations, a design's own `onFrame(t)`, and screen recordings imported like screenshots. `upload` sends app previews. `creative` puts the header and search results asset (image or video) into the Asset Library and places it on every localization. `event` creates In-App Events from `events/<id>/event.json`. Each one shows a plan first and changes App Store Connect only with `--confirm`. Sizes, frame rates and lengths come from App Store Connect's own spec data; see [configuration](docs/configuration.md#video).
 - **Tests.** `npm test` uses node:test and needs no extra dependencies.
 
 ## License

@@ -11,11 +11,17 @@ import { CliError, EXIT, usage } from './errors.mjs';
 export const FRAMES_DIR = process.env.STORESHOTS_FRAMES ?? join(DATA_DIR, 'frames');
 const CDN = 'https://devimages-cdn.apple.com/design/resources/download/';
 
-/** Model id → the DMG on developer.apple.com/design/resources and its PNG folder. */
+/**
+ * Model id → the DMG on developer.apple.com/design/resources, its PNG folder and the end of
+ * the file names to take (default "Portrait.png"). The Duo has one bezel per display:
+ * the open inner display in landscape, the closed outer display in portrait.
+ */
 export const CATALOG = {
   'iphone-18-pro-max': { dmg: 'Bezel-iPhone-18.dmg', folder: 'Bezel-iPhone-18/PNG/iPhone 18 Pro Max' },
   'iphone-18-pro': { dmg: 'Bezel-iPhone-18.dmg', folder: 'Bezel-iPhone-18/PNG/iPhone 18 Pro' },
   'ipad-pro-13-m5': { dmg: 'Bezel-iPad-Pro-(M5).dmg', folder: null }, // folder found by listing the DMG
+  'iphone-duo-inner': { dmg: 'Bezel-iPhone-Duo.dmg', folder: 'Bezel-iPhone-Duo/PNG', match: 'Inner Open Landscape.png' },
+  'iphone-duo-outer': { dmg: 'Bezel-iPhone-Duo.dmg', folder: 'Bezel-iPhone-Duo/PNG', match: 'Outer Closed Portrait.png' },
 };
 
 const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -39,12 +45,12 @@ export function installFrames(model) {
     if (!pngs.length) throw new CliError(`no 13" portrait PNGs in ${entry.dmg}`, { exit: EXIT.RUN });
     folder = pngs[0].slice(0, pngs[0].lastIndexOf('/'));
   }
-  const tmp = join(downloads, `${model}.tmp`);
+  const tmp = join(downloads, `${model}.tmp`), match = entry.match ?? 'Portrait.png';
   rmSync(tmp, { recursive: true, force: true });
-  execFileSync('7z', ['e', '-y', `-o${tmp}`, dmg, `${folder}/*Portrait.png`], { stdio: 'ignore' });
+  execFileSync('7z', ['e', '-y', `-o${tmp}`, dmg, `${folder}/*${match}`], { stdio: 'ignore' });
   mkdirSync(out, { recursive: true });
-  for (const file of readdirSync(tmp).filter(f => f.endsWith('Portrait.png'))) {
-    // "iPhone 18 Pro Max - Black - Portrait.png" → black.png
+  for (const file of readdirSync(tmp).filter(f => f.endsWith(match))) {
+    // "iPhone 18 Pro Max - Black - Portrait.png" → black.png, "iPhone Duo - Night Sky - Inner Open Landscape.png" → night-sky.png
     const colour = slug(file.split(' - ').slice(-2, -1)[0] ?? file);
     renameSync(join(tmp, file), join(out, `${colour}.png`));
   }

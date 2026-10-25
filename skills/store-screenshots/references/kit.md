@@ -63,6 +63,15 @@ All three come from `screenshots.json` and work in every style: `slides[].pieces
 - Drop shadows on `.device`: use `filter: drop-shadow(...)`, not `box-shadow` (the bezel has transparent corners).
 - After editing only copy or CSS, `storeshots build` is enough; recapture only when the app's screens change.
 
+## Video (`storeshots video`)
+The same design renders as video: each frame is the page at time t. What moves:
+- **Screen recordings.** A shot imported from a recording (`storeshots import rec.mov --shots rain`) plays inside `.device`, `.screen` and `img[data-shot]`, looping. Pop-outs keep its first frame, so a video slide should not pop.
+- **CSS animations and transitions** pause at t: write them normally, with `animation-fill-mode: forwards` for an entrance that stays.
+- `--t` on `:root` holds t in seconds, for `calc()`.
+- `window.onFrame = async (t, SHOTS) => { … }` for anything else (a counter, a canvas, a Rive state). Keep it a pure function of t: frames are taken in order but may repeat.
+- `<section class="slide" data-duration="20">` sets one slide's length.
+Headers and search results videos are muted and loop, so let the end flow back into the start. Search results show the asset small, so one subject and few words. App previews must show the app itself (captured footage) and run 15–30 s.
+
 ## Caption font (look.font)
 `look.font` sets every caption in one face, over the style's own: `style` (default), `sf-rounded` and `sf` (Apple's SF Pro, installed per machine with `storeshots fonts --install sf`; Apple's licence covers mock-ups of apps for its platforms, so it is linked from this machine and never copied into a repo), `nunito`, `fredoka` (bundled, OFL), or the app's own font: `{"file": "<path in the app repo>", "family": "Name"}`. Compare them with `storeshots catalog font`. Prefer legible, friendly faces (rounded ones read well at thumbnail size); `storeshots check` fails a font that lacks a character of the copy.
 

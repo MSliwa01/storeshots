@@ -22,6 +22,10 @@ import { importShots } from '../src/import.mjs';
 import { skill } from '../src/skill.mjs';
 import { stock } from '../src/stock.mjs';
 import { upload } from '../src/upload.mjs';
+import { creative } from '../src/creative.mjs';
+import { device as deviceSpec } from '../src/devices.mjs';
+import { event, listEvents, loadEvent } from '../src/event.mjs';
+import { renderVideos } from '../src/video.mjs';
 
 const HELP = `storeshots <command> [store] [options]
 
@@ -51,8 +55,19 @@ Output
                      --slides a,b (rewrite only these)   --design design/x.html (→ output/variants/x/)
   review             output/review/: contact sheet, search-results mock, strip
   check              store and readability rules (size, alpha, count, text size, contrast); writes manifest
-  build              render + review + check
-  upload             plan the App Store Connect upload; --confirm applies it   --version 1.2.0
+  build              render + review + check (app preview canvases render as video)
+  upload             plan the App Store Connect upload of screenshots and app previews; --confirm applies it
+                     --version 1.2.0. iPhone Duo outer + inner share one set (≤ 10 between them)
+
+Video and the rest of the product page
+  video              design → output/video/<device>/<locale>/NN-<slide>.mp4, frame by frame: CSS animations,
+                     window.onFrame(t), and screen recordings brought in with 'import rec.mov --shots a'
+                     --devices preview-iphone-6.9,header,search  --slides a,b   (screenshots.json "video": fps, duration, audio)
+  creative           product page header and search results asset (iOS 27+): one image or video per locale into the
+                     Asset Library, placed on every localization; --confirm applies, --submit sends assets on their own
+                     to App Review (needed for a version on sale)   --version 2.0  --own-only
+  event [id]         In-App Event from store/events/<id>/event.json: copy, schedule, card and details media;
+                     --confirm creates or updates it, --submit sends it to App Review. No id: list the events
 
 Research and assets
   refs               download top apps' screenshots → references/<country>/<app>/
@@ -85,7 +100,7 @@ IMAGE_API_BASE/IMAGE_API_KEY, STORESHOTS_BROWSER, STORESHOTS_FRAMES, UNSPLASH_AC
 
 /** argv → { command, positional, flags } with boolean flags and `--name value` pairs. */
 function parse(argv) {
-  const BOOLEAN = new Set(['json', 'confirm', 'yes', 'force', 'curated', 'help', 'dry-run']);
+  const BOOLEAN = new Set(['json', 'confirm', 'yes', 'force', 'curated', 'help', 'dry-run', 'submit', 'own-only']);
   const OPTIONAL = new Set(['install']); // a flag that may or may not take a value
   const [command, ...rest] = argv;
   const positional = [], flags = {};
@@ -140,10 +155,11 @@ async function run({ command, positional, flags }) {
   }
 
   if (command === 'skill') return skill({ install: flags.install });
-  const PROJECT = ['stock', 'cutout', 'assets', 'style', 'doctor', 'capture', 'import', 'catalog', 'elements', 'proof', 'render', 'review', 'check', 'build', 'upload', 'art'];
+  const PROJECT = ['stock', 'cutout', 'assets', 'style', 'doctor', 'capture', 'import', 'catalog', 'elements', 'proof', 'render', 'review', 'check', 'build', 'upload', 'art', 'video', 'creative', 'event'];
   if (!PROJECT.includes(command)) throw usage(`unknown command "${command}"`, { fix: 'run `storeshots help`' });
   // `catalog <axis> [store]`: the axis comes first.
-  const storeArg = command === 'import' ? flags.store : (command === 'catalog' && AXES.includes(positional[0])) || (command === 'stock' && flags.get == null) || command === 'cutout' ? positional[1] : positional[0];
+  const storeArg = command === 'import' ? flags.store
+    : (command === 'catalog' && AXES.includes(positional[0])) || (command === 'stock' && flags.get == null) || command === 'cutout' || (command === 'event' && positional[0] && !positional[0].includes('/') && positional[0] !== '.') ? positional[1] : positional[0];
   const store = command === 'style' ? null : command === 'doctor' && !positional[0] ? tryStore() : loadStore(storeArg, { design: flags.design });
   if (command === 'doctor') {
     const result = await doctor(store);
@@ -156,24 +172,45 @@ async function run({ command, positional, flags }) {
     return writeStyle(loadStore(named ? positional[1] : positional[0]), named ? positional[0] : undefined, { out: flags.out });
   }
   const options = { devices: list(flags.devices) ?? store.devices, locales: list(flags.locales ?? flags.locale) ?? store.locales };
+  const kind = id => deviceSpec(id).kind;
+  const of = (...kinds) => options.devices.filter(id => kinds.includes(kind(id)));
   switch (command) {
     case 'capture': return capture(store, { ...options, only: list(flags.shots) });
-    case 'import': return importShots(store, positional, { device: options.devices[0], locale: options.locales[0], shots: list(flags.shots) });
+    case 'import': return importShots(store, positional, { device: flags.device ?? options.devices[0], locale: options.locales[0], shots: list(flags.shots) });
     case 'catalog': return catalog(store, { axis: AXES.includes(positional[0]) ? positional[0] : 'style', slides: list(flags.slides), pick: flags.pick });
     case 'proof': return proof(store, { country: flags.country });
     case 'elements': return elements(store, { slides: list(flags.slides), pick: flags.pick, locale: options.locales[0], device: options.devices[0] });
-    case 'render': return { renders: await render(store, { ...options, slides: list(flags.slides) }) };
-    case 'review': return { review: await review(store, options) };
+    // App previews are video only: render leaves them to `video`.
+    case 'render': return { renders: await render(store, { ...options, devices: of('screenshot', 'creative', 'event'), slides: list(flags.slides) }) };
+    case 'review': return { review: await review(store, { ...options, devices: of('screenshot') }) };
     case 'check': return gate(check(store, options));
     case 'build': {
-      const renders = await render(store, { ...options, slides: list(flags.slides) });
-      const reviewed = await review(store, options);
-      return gate({ renders, review: reviewed, ...check(store, options) });
+      const renders = await render(store, { ...options, devices: of('screenshot', 'creative', 'event'), slides: list(flags.slides) });
+      const videos = of('preview').length ? await renderVideos(store, { ...options, devices: of('preview'), slides: list(flags.slides) }) : [];
+      const reviewed = await review(store, { ...options, devices: of('screenshot') });
+      return gate({ renders, videos, review: reviewed, ...check(store, options) });
+    }
+    case 'video': {
+      const devices = list(flags.devices) ?? store.devices.filter(id => kind(id) !== 'screenshot');
+      if (!devices.length) throw usage('no video canvases in screenshots.json', { fix: 'add one to devices ("preview-iphone-6.9", "header", "search", "event-card", "event-details"), or pass --devices', next: 'storeshots video --devices preview-iphone-6.9' });
+      return { videos: await renderVideos(store, { ...options, devices, slides: list(flags.slides) }) };
     }
     case 'upload': {
-      const verdict = check(store, { ...options, log: () => {} });
+      const devices = of('screenshot', 'preview');
+      const verdict = check(store, { ...options, devices, log: () => {} });
       if (!verdict.ok) throw new CliError('the rendered set fails `storeshots check`', { exit: EXIT.CHECK, detail: verdict.errors.join('\n'), fix: 'fix the errors, rebuild, then upload', next: 'storeshots build' });
       return upload(store, { ...options, version: flags.version, confirm: !!(flags.confirm || flags.yes) });
+    }
+    case 'creative': {
+      const devices = of('creative');
+      const verdict = check(store, { ...options, devices, log: () => {} });
+      if (devices.length && !verdict.ok) throw new CliError('the header or search asset fails `storeshots check`', { exit: EXIT.CHECK, detail: verdict.errors.join('\n'), fix: 'fix the errors, rerender, then rerun', next: `storeshots check --devices ${devices.join(',')}` });
+      return creative(store, { ...options, version: flags.version, confirm: !!(flags.confirm || flags.yes), submit: !!flags.submit, ownOnly: !!flags['own-only'] });
+    }
+    case 'event': {
+      const id = positional[0] && positional[0] !== storeArg ? positional[0] : null;
+      if (!id) return { events: listEvents(store).map(e => { try { const { ev, locales } = loadEvent(store, e); return { id: e, referenceName: ev.referenceName, locales, schedule: ev.schedule }; } catch (err) { return { id: e, error: err.message, detail: err.detail }; } }) };
+      return event(store, id, { confirm: !!(flags.confirm || flags.yes), submit: !!flags.submit });
     }
     case 'stock': return stock(store, { query: flags.get == null ? positional[0] : undefined, provider: flags.provider, orientation: flags.orientation, n: flags.n ?? 12, get: flags.get, id: flags.id });
     case 'cutout': return cutout(store, { source: positional[0], id: flags.id, crop: flags.crop, model: flags.model });

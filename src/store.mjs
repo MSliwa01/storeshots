@@ -33,6 +33,7 @@ export function loadStore(dirArg, { design } = {}) {
       raw: resolve(dir, config.paths?.raw ?? join(out, 'raw')),
       final: variant ? join(variant, 'final') : join(out, 'final'),
       review: variant ? join(variant, 'review') : join(out, 'review'),
+      video: variant ? join(variant, 'video') : join(out, 'video'),
       build: join(out, '.build'),
     },
     /** Device spec merged with this project's per-device settings (design file, frame). */
@@ -42,7 +43,12 @@ export function loadStore(dirArg, { design } = {}) {
       // The design file: --design, then devices.<id>.design, then the current style's file.
       const style = config.look?.style ?? config.look?.world;
       const fallback = style ? `design/${style}.html` : `design/${id}.html`;
-      return { ...device(id), ...own, design: variantDesign ?? resolve(dir, own.design ?? fallback) };
+      // devices.<id>.video holds render settings (fps, duration, audio); the spec's own `video` stays.
+      const { video: settings, ...rest } = own;
+      const spec = { ...device(id), ...rest };
+      // A header, an event card or an app preview shows the captures of a screenshot device.
+      if (spec.kind !== 'screenshot' && !spec.shotsFrom) spec.shotsFrom = Object.keys(config.devices ?? {}).find(d => device(d).kind === 'screenshot');
+      return { ...spec, design: variantDesign ?? resolve(dir, own.design ?? fallback) };
     },
     copy(locale) {
       const file = join(dir, 'copy', `${locale}.json`);
@@ -51,6 +57,11 @@ export function loadStore(dirArg, { design } = {}) {
     /** Where a capture is written (always PNG). */
     rawShot(deviceId, locale, shot) {
       return join(this.paths.raw, deviceId, locale, `${shot}.png`);
+    },
+    /** A screen recording of the shot (output/raw/<device>/<locale>/<shot>.mp4|mov|m4v|webm), or null. */
+    clipFile(deviceId, locale, shot) {
+      const base = this.rawShot(deviceId, locale, shot).replace(/\.png$/, '');
+      return ['.mp4', '.mov', '.m4v', '.webm'].map(ext => base + ext).find(f => existsSync(f)) ?? null;
     },
     /** The capture to read: the PNG, or a JPEG of the same name (smaller, e.g. in example projects). */
     shotFile(deviceId, locale, shot) {

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { fakeStore, tmp } from './helpers.mjs';
+import { existsSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fakeStore, png, tmp } from './helpers.mjs';
+import { loadStore } from '../src/store.mjs';
 
 const BIN = fileURLToPath(new URL('../bin/storeshots.mjs', import.meta.url));
 const cli = (args, cwd = tmp()) => {
@@ -34,6 +37,23 @@ test('check on a clean set: exit 0', () => {
   const r = cli(['check', fakeStore()]);
   assert.equal(r.code, 0, r.stderr);
   assert.equal(r.json.ok, true);
+});
+
+test('import --device and --locale select a non-default output slot', () => {
+  const project = tmp();
+  writeFileSync(join(project, 'screenshots.json'), JSON.stringify({
+    app: { name: 'Test' }, locales: ['en', 'pl'],
+    devices: { 'iphone-6.9': {}, 'iphone-duo-outer': {} }, shots: { hero: {} },
+  }));
+  const source = join(tmp(), 'hero.png');
+  writeFileSync(source, png(466, 678));
+  const r = cli(['import', source, '--store', project, '--device', 'iphone-duo-outer', '--locale', 'pl']);
+  assert.equal(r.code, 0, JSON.stringify(r.json));
+  assert.equal(r.json.device, 'iphone-duo-outer');
+  assert.equal(r.json.locale, 'pl');
+  const store = loadStore(project);
+  assert.ok(existsSync(store.rawShot('iphone-duo-outer', 'pl', 'hero')));
+  assert.equal(existsSync(store.rawShot('iphone-6.9', 'en', 'hero')), false);
 });
 
 test('init --force keeps existing copy', async () => {

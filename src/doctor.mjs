@@ -11,7 +11,7 @@ import { ocrLanguages } from './elements.mjs';
 import { launchBrowser } from './browser.mjs';
 import { FRAMES_DIR } from './frames.mjs';
 import { hostOutput, resolveHost } from './host.mjs';
-import { ascCredentials } from './upload.mjs';
+import { ascCredentials } from './asc.mjs';
 
 const has = cmd => { try { execFileSync('sh', ['-c', `command -v ${cmd}`], { stdio: 'ignore' }); return true; } catch { return false; } };
 

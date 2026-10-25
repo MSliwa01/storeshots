@@ -27,11 +27,30 @@
 | `bundleId`, `ascAppId` | for `upload` and `proof` |
 
 ## locales, devices
-`locales`: the copy files (`copy/<locale>.json`) and capture languages. `devices`: store slots to produce. `iphone-6.9` is 1320×2868 and `ipad-13` is 2064×2752. Per device:
+`locales`: the copy files (`copy/<locale>.json`) and capture languages. `devices`: canvases to produce.
+
+| Canvas | Size | Goes to |
+|---|---|---|
+| `iphone-6.9` | 1320×2868 | screenshot set `APP_IPHONE_67` |
+| `ipad-13` | 2064×2752 | screenshot set `APP_IPAD_PRO_3GEN_129` |
+| `iphone-duo-outer`, `iphone-duo-inner` | 1398×2034, 2853×2007 | one shared set `APP_IPHONE_DUO`, outer first, 10 at most between them |
+| `preview-iphone-6.9`, `preview-ipad-13` | 886×1920, 1200×1600 | app preview sets `IPHONE_67`, `IPAD_PRO_3GEN_129`: video only, 15–30 s, 23–30 fps, with an audio track, 3 at most |
+| `header` | 3840×1646 | product page header: PNG, or video 10–30 s at 30 or 60 fps |
+| `search` | 2880×1920 (3:2, 1920–3840 wide) | search results asset: PNG or JPEG, or video 15–30 s at 30 or 60 fps |
+| `event-card`, `event-details` | 1920×1080, 1080×1920 | In-App Event media (see [events](#events)) |
+
+`header` and `search` need iOS 27 on the viewer's device and take one asset per locale. Their copy is checked harder: prices, web addresses, ©, ® and ™, rankings, awards and App Store badges are errors. Canvases other than screenshots show the captures of a screenshot canvas (`shotsFrom`, default: the first one in `devices`). Per device:
 - `frame`: `generic/black` or `generic/silver` (a drawn iPhone), `plain[/<colour>[/<width>]]` (a flat phone-like border: `white`, `black` or a hex without `#`, width in ‰ of the screen, default 34), `none` (the bare rounded screen), or an Apple bezel such as `iphone-18-pro-max/black` (`storeshots frames`). A style may bring its own frame; `"look": {"frame": …}` overrides it, and `"device"` keeps this one.
 - `design`: a design file other than `design/<style>.html`.
+- `shotsFrom`: the screenshot canvas whose captures a header, event or app preview shows.
+- `video`: render settings for this canvas (see [video](#video)).
 
 ## capture
+
+The `iphone-duo-outer` canvas is 1398×2034, portrait. `iphone-duo-inner` is 2853×2007, landscape. These match [Apple's screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications). `capture` can't fold or unfold the Simulator, so capture each display by hand and use `storeshots import --device <id>`. Both displays upload into one `APP_IPHONE_DUO` set, outer first. Each display needs a design made for its aspect ratio. Apple's Duo bezels install with `storeshots frames iphone-duo-inner` and `storeshots frames iphone-duo-outer` (colours `night-sky`, `star-white`).
+
+Screen recordings (`xcrun simctl io booted recordVideo rec.mov`) import the same way: `storeshots import rec.mov --shots rain`. The recording is kept for `storeshots video`, and a still from its first second stands in for screenshots.
+
 | Key | |
 |---|---|
 | `bundleId` | **required for capture**: the app on the simulator |
@@ -75,6 +94,40 @@ The set, in order. Without `slides` there is one slide per shot.
 | `emphasis` | how the `*marked*` words stand out: `"box"` (the style's own), `"colour"`, `"serif"` (italic serif words in a sans headline), `"size"` (a bigger line), or `{"style": "colour", "colour": "#237740"}`. Without a colour, `colour` darkens the slide's background colour |
 
 Each style sets its own defaults for `colours`, `background` and the layout rhythm. Keys set in `look` override them.
+
+## video
+`storeshots video` renders each slide of a canvas's design into `output/video/<device>/<locale>/NN-<slide>.mp4` (H.264, yuv420p). Each frame is the design at time t: imported screen recordings step to their frame and loop, CSS animations and transitions are paused at t, the root's `--t` holds t in seconds, and `window.onFrame(t, SHOTS)` runs if the design defines it. Pop-outs and cut-outs keep the recording's first frame.
+
+```json
+"video": { "fps": 30, "duration": 20, "audio": "design/preview-music.m4a", "poster": "00:00:05:00" }
+```
+
+| Key | |
+|---|---|
+| `fps` | frames per second (default 30) |
+| `duration` | seconds per slide (default 15, the shortest length every canvas takes); a slide's `data-duration` overrides it |
+| `audio` | a sound file for app previews, relative to `store/`; without it they get a silent track, which App Store Connect requires |
+| `poster` | the app preview's poster frame as a timecode |
+
+Top level for every canvas, or under `devices.<id>.video` for one. `check` and `upload` probe every video against the canvas's spec.
+
+## creative
+`storeshots creative` takes the header and search results asset of each locale (the rendered video if there is one, else the image) and places it on every localization of the version. A localization without its own render gets the first locale's, or the locale in `"creative": {"fallback": "en"}`; `--own-only` skips those instead. Files are uploaded once: their names carry their hash, so a rerun reuses them. An editable version takes the placements now and App Review checks them with it. The version on sale needs the assets approved first: `--version <on sale> --confirm --submit` sends them to App Review on their own, and a rerun after approval places them.
+
+## events
+`storeshots event <id>` reads `store/events/<id>/event.json`:
+
+```json
+{
+  "referenceName": "Halloween 2026", "badge": "SPECIAL_EVENT", "purpose": "APPROPRIATE_FOR_ALL_USERS", "priority": "HIGH",
+  "deepLink": "myapp://halloween", "primaryLocale": "en-US",
+  "schedule": { "territories": "all", "publishStart": "2026-10-20T00:00:00Z", "eventStart": "2026-10-23T22:00:00Z", "eventEnd": "2026-11-01T08:00:00Z" },
+  "copy": { "en-US": { "name": "Halloween in the app", "short": "Pumpkins glow on your porch at night", "long": "…" } },
+  "media": { "card": "card.png", "details": "../../output/video/event-details/{locale}" }
+}
+```
+
+`name` takes 30 characters, `short` 50 and `long` 120. An event runs for 31 days at most and shows at most 14 days before it starts. `territories` is `"all"` or a list of codes. Media paths are relative to the event's folder. `{locale}` is replaced per locale, a folder gives its first file, and a locale without its own file uses the primary locale's. Card: 16:9, 1920–3840 wide. Details page: 9:16, 1080–2160 wide. Either may be a video of 15–30 s. Without `--confirm` the command only prints the plan. `--confirm` creates or updates the event, its localizations and media, and `--submit` sends it to App Review. An event that is in review, approved or published is not changed: give it a new `referenceName`.
 
 ## paths
 `{"output": "output", "raw": "output/raw"}`: where generated files go, relative to `store/`. `capture` writes PNGs into `raw`. When a shot has no PNG, storeshots reads a JPEG of the same name, so captures you commit can stay small. The examples keep theirs in `"raw": "captures"`.

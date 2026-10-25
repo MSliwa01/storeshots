@@ -1,6 +1,6 @@
 ---
 name: store-screenshots
-description: Make, redo, localize or upload App Store screenshots from the real app with the `storeshots` CLI — capture on the iOS Simulator, compose in HTML/CSS with Apple bezels, check store and readability rules, upload to App Store Connect. Use for "app store screenshots", "store listing images", ASO visuals, or adding a screenshot demo mode to an app.
+description: Make, redo, localize or upload App Store screenshots from the real app with the `storeshots` CLI — capture on the iOS Simulator, compose in HTML/CSS with Apple bezels, check store and readability rules, upload to App Store Connect. Also app preview videos, the product page header and search results asset, and In-App Events. Use for "app store screenshots", "store listing images", "app preview", "header video", "in-app event", ASO visuals, or adding a screenshot demo mode to an app.
 ---
 
 # Store screenshots with storeshots
@@ -24,7 +24,8 @@ Never one-shot a set: it is made with the user in short interview rounds → `re
 8. **Focus per slide**: `storeshots elements` finds the UI elements of each slide's capture that could pop out (cards, list rows, chips cut along their own shape; blocks of a card's key lines, a calendar week, stacked cards in an evenly padded container), ranks them against the slide's copy and draws numbered marks → open `output/elements/marks.png`. For each slide pick the one element that proves the headline (not the biggest, not chrome; the ranking is a prior, `--pick best` only a starting point): `storeshots elements --slides <id> --pick <n>`; `--pick none` for slides that need no pop (the spread, the closer).
 9. **Render, interview round 2**: `storeshots style` (writes `design/<style>.html`), `storeshots build --design design/<style>.html`; for open choices `storeshots catalog style|layout|colours|accent|background` renders the options numbered. Show the strip and sheets, ask by number, `--pick`, rebuild. `storeshots style` regenerates the file, so settle slides, look and pops before refining the design by hand → `references/kit.md`. ★
 10. **Full set**: `storeshots build`, then open `output/review/*-sheet.png` and `*-strip.png` yourself and critique against the checklist in `references/design.md` and the user's rejections (interview.md); iterate until `check` is clean and the set passes your critique. Anything added beyond real UI on the app's own ground goes to the user as two versions to pick from. Note the user's choices in `~/.storeshots/taste.md` (a weak prior, see interview.md). ★
-11. **Upload**: `storeshots upload` (plan), then `storeshots upload --confirm` only after the user's OK → `references/specs.md`.
+11. **Upload**: `storeshots upload` (plan), then `storeshots upload --confirm` only after the user's OK → `references/specs.md`. iPhone Duo outer and inner go into one set.
+12. **The rest of the product page** (when the user wants it): app previews (`preview-iphone-6.9` in `devices`, a screen recording imported with `storeshots import rec.mov --shots <id>`, `storeshots video`), the header and search results asset (`header`, `search`; `storeshots render` or `storeshots video`, then `storeshots creative`), In-App Events (`store/events/<id>/event.json`, `storeshots event <id>`) → `references/kit.md` (video), `references/specs.md`. Each prints a plan; `--confirm` and `--submit` only after the user's OK. ★
 
 Show images inline: `![sheet](/abs/path/store/output/review/iphone-6.9-en-sheet.png)`.
 
@@ -42,12 +43,15 @@ Show images inline: `![sheet](/abs/path/store/output/review/iphone-6.9-en-sheet.
 | New language | `locales` + `copy/<locale>.json` (rewrite, don't translate) | `capture --locales x`, `build --locales x` |
 | Widget / Live Activity art | the app's render test (see capture.md) | the test, then `build` |
 | Upload refused | read `fix` (version locked, credentials) | `storeshots upload` |
+| Header or search asset on the version on sale | — | `storeshots creative --version <x> --confirm --submit`, after approval `storeshots creative --version <x> --confirm` |
+| A seasonal event | `store/events/<id>/event.json` + media | `storeshots event <id>`, then `--confirm --submit` |
 
 ## Non-negotiables
 - Real app UI only, captured from the app. Never redraw, invent or AI-generate UI; generated art (`storeshots art`) is for props, scenes and mascot poses only.
 - `storeshots check` passes: exact size, RGB without alpha, 1–10 per set, no text below 4 % of the width, one headline size, nothing crossing a slide edge, text contrast measured on the rendered pixels (≥ 3:1 headlines, aim for 4.5:1), no letters hidden behind a phone or pop, no texts running into each other, every character in the design's own font, no other platforms in the copy. Warnings cover empty bands, text on top of the UI or near an edge, prices, claims, filler words and long headlines. Contrast messages name the fix (a shade that passes, or a busy ground); apply it rather than arguing.
 - 9:41 status bar, realistic local data, no debug UI, no system alerts, no prices, no "#1/best/free", no other platforms' devices (App Review 2.3).
 - Slides 1–3 sell the app alone: they are what search shows.
+- Headers, search results assets and event media: no prices, web addresses, ©, rankings, awards or App Store badges, 4+ content (`check` fails them). App previews show the app itself and carry an audio track.
 - Apple bezels are downloaded per machine (license: depict your own app, no redistribution); never commit them.
 
 ## References

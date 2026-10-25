@@ -58,6 +58,13 @@ shoot_when_idle() {
 export function capture(store, { devices, locales, only, log = console.error }) {
   const cfg = store.config.capture ?? {};
   if (!cfg.bundleId) throw usage('screenshots.json: capture.bundleId is missing', { fix: 'add "capture": {"bundleId": "<your.bundle.id>"} to screenshots.json' });
+  for (const id of devices) {
+    const spec = deviceSpec(id);
+    if (!spec.simulator) throw usage(`automatic capture is not supported for ${spec.label}`, {
+      fix: 'capture the matching display in the iOS Simulator, then import its screenshots',
+      next: `storeshots import <screenshots> --device ${id}`,
+    });
+  }
   const unknown = (only ?? []).filter(id => !store.shots[id]);
   if (unknown.length) throw usage(`unknown shot(s): ${unknown.join(', ')}`, { fix: `known shots: ${Object.keys(store.shots).join(', ')}` });
   const shots = Object.entries(store.shots).filter(([id, shot]) => shot.capture !== false && (!only || only.includes(id)));

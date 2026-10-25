@@ -896,6 +896,28 @@
     return /^-1/.test(getComputedStyle(img).scale) ? flat.map(side => ({ left: 'right', right: 'left' })[side] ?? side) : flat;
   }
 
+  /**
+   * Video frames (`storeshots video`): shows time `t` (seconds). Recorded clips step to their
+   * frame (looping), CSS animations and transitions pause at t, `--t` holds t, and the
+   * design's window.onFrame(t, SHOTS) runs. Pop-outs and cut-outs keep the first frame.
+   */
+  window.__seek = async t => {
+    const pending = [];
+    for (const c of Object.values(S.clips ?? {})) {
+      const url = `${c.base}f${String((Math.floor(t * c.fps + 1e-6) % c.count) + 1).padStart(5, '0')}.jpg`;
+      for (const img of document.images) if (img.src.startsWith(c.base) && img.src !== url) { img.src = url; pending.push(img.decode().catch(() => {})); }
+      for (const el of document.querySelectorAll('[style*="background"]')) {
+        const bg = el.style.backgroundImage;
+        if (bg.includes(c.base)) el.style.backgroundImage = bg.replace(/url\("[^"]+"\)/, `url("${url}")`);
+      }
+    }
+    for (const a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }
+    document.documentElement.style.setProperty('--t', String(t));
+    if (window.onFrame) await window.onFrame(t, S);
+    await Promise.all(pending);
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  };
+
   window.__kit = (async () => {
     fill();
     await document.fonts.ready;

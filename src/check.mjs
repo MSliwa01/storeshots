@@ -3,8 +3,10 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { sizeFits } from './devices.mjs';
 import { pngInfo } from './png.mjs';
 import { proofWarnings } from './proof.mjs';
+import { checkVideos } from './video.mjs';
 
 const HEADLINE_MIN = 0.06; // of the canvas width: below this it is unreadable in search
 const HEADLINE_TARGET = 0.09; // top apps use 9–12%
@@ -39,6 +41,10 @@ const PRICE = /([$€£¥]\s?\d|\d\s?([$€£¥]|zł|pln|usd|eur)\b|\bfree\b|\bg
 const CLAIM = /(#\s?1\b|\bno\.?\s?1\b|\bnumber one\b|\bbest\b|\bnajlepsz\w*|\bnumer jeden\b|\bnr\s?1\b)/i;
 const CLICHES = ['unlock', 'seamless', 'effortless', 'revolutionary', 'revolutionize', 'game-changer', 'game changer', 'all-in-one', 'next level', 'supercharge', 'elevate your', 'your ultimate', 'at your fingertips', 'like never before', 'take control of', 'odkryj', 'w zasięgu ręki', 'na wyciągnięcie ręki', 'rewolucyjn', 'bezproblemow', 'nowy wymiar', 'w jednym miejscu', 'wszystko, czego potrzebujesz', 'wszystko czego potrzebujesz', 'przenieś na wyższy poziom'];
 const EMOJI = /\p{Extended_Pictographic}/u;
+// Headers, search results assets and event media: App Store Connect rejects prices, web
+// addresses, the copyright sign, unearned awards, Apple badges and other platforms' logos.
+const URL_TEXT = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|app|io|net|org|dev|pl|de)\b)/i;
+const BADGE = /(download on the app store|available on the app store|pobierz z app store|app of the day|editors'? choice)/i;
 const CJK = /[぀-ヿ㐀-鿿가-힯]/;
 
 // Render problems in words, with the fix (the rest print as type + JSON).
@@ -58,8 +64,8 @@ const PROBLEMS = {
   'zoom-too-small': p => `the zoom only reaches ${p.scale}×: its focus is in the middle of a tall screen; pick a focus nearer the top or the bottom, or a smaller one`,
 };
 
-/** Rules on one text: hidden letters, glyphs, edges, words. */
-function textRules(t, at, device, errors, warnings) {
+/** Rules on one text: hidden letters, glyphs, edges, words. `strict`: a creative or event canvas. */
+function textRules(t, at, device, errors, warnings, strict = false) {
   if (t.role === 'accent') return;
   if (t.fontsMissing?.length) errors.push(`${at}: font ${t.fontsMissing.map(f => `"${f}"`).join(', ')} never loaded; check the @font-face url and family name`);
   if (t.missingGlyphs) errors.push(`${at}: the font has no ${[...t.missingGlyphs].map(c => `"${c}"`).join(' ')}; they fall back to another font. Pick a font that covers this locale`);
@@ -82,8 +88,16 @@ function textRules(t, at, device, errors, warnings) {
   const text = (t.text ?? '').replace(/\u00a0/g, ' ').trim();
   if (!text) return;
   if (OTHER_PLATFORMS.test(text)) errors.push(`${at}: mentions another platform ("${text.match(OTHER_PLATFORMS)[0]}"); App Review rejects that (2.3.10)`);
-  if (PRICE.test(text)) warnings.push(`${at}: a price or "free" ("${text.match(PRICE)[0]}"); prices go stale and differ per market, keep them out of screenshots`);
-  if (CLAIM.test(text)) warnings.push(`${at}: an unprovable claim ("${text.match(CLAIM)[0]}"); show the thing instead, or cite the source`);
+  if (strict) {
+    const why = 'App Store Connect rejects it on headers, search results assets and event media';
+    if (PRICE.test(text)) errors.push(`${at}: a price or "free" ("${text.match(PRICE)[0]}"); ${why}`);
+    if (URL_TEXT.test(text)) errors.push(`${at}: a web address ("${text.match(URL_TEXT)[0]}"); ${why}`);
+    if (/[©®™]/.test(text)) errors.push(`${at}: a "${text.match(/[©®™]/)[0]}" sign; ${why}`);
+    if (CLAIM.test(text)) errors.push(`${at}: a ranking or award claim ("${text.match(CLAIM)[0]}"); ${why} unless Apple gave it`);
+    if (BADGE.test(text)) errors.push(`${at}: an App Store badge or Apple award ("${text.match(BADGE)[0]}"); ${why}`);
+  }
+  if (!strict && PRICE.test(text)) warnings.push(`${at}: a price or "free" ("${text.match(PRICE)[0]}"); prices go stale and differ per market, keep them out of screenshots`);
+  if (!strict && CLAIM.test(text)) warnings.push(`${at}: an unprovable claim ("${text.match(CLAIM)[0]}"); show the thing instead, or cite the source`);
   const cliche = CLICHES.find(c => text.toLowerCase().includes(c));
   if (cliche) warnings.push(`${at}: "${cliche}" is filler any app could sign; say what this app does, in the user's words`);
   if (EMOJI.test(text)) warnings.push(`${at}: emoji in the copy; they render as Apple's on the device but read as filler in a caption`);
@@ -127,22 +141,44 @@ export function check(store, { devices, locales, log = console.error }) {
   const errors = [], warnings = [...proofWarnings(store.config?.look?.proof)];
   const counts = {};
   const manifest = { generatedAt: new Date().toISOString(), app: store.app.name, sets: [] };
+  const shared = {}; // display type → locale → screenshots across the canvases that share it
   for (const deviceId of devices) {
-    const device = store.device(deviceId);
+    const device = store.device(deviceId), strict = device.kind === 'creative' || device.kind === 'event';
     for (const locale of locales) {
       const where = `${deviceId}/${locale}`, dir = join(store.paths.final, deviceId, locale);
       const files = existsSync(dir) ? readdirSync(dir).filter(f => /^\d+-.+\.png$/.test(f)).sort() : [];
-      counts[where] = files.length;
-      if (!files.length) { errors.push(`${where}: no screenshots rendered`); continue; }
-      if (files.length > 10) errors.push(`${where}: ${files.length} screenshots, App Store allows at most 10`);
-      if (files.length < 3) warnings.push(`${where}: only ${files.length} screenshot(s); search results show 3`);
+      let videos = [];
+      try { videos = device.kind === 'screenshot' ? [] : checkVideos(store, device, locale); } catch (e) { errors.push(`${where}: ${e.message}`); }
+      for (const v of videos) for (const p of v.problems) errors.push(`${where}/${v.file.split('/').pop()}: ${p}`);
+      counts[where] = files.length + videos.length;
+      if (device.kind === 'preview') {
+        // App previews are video only.
+        if (!videos.length) errors.push(`${where}: no app preview rendered (storeshots video)`);
+        if (videos.length > device.max) errors.push(`${where}: ${videos.length} app previews, at most ${device.max}`);
+        manifest.sets.push({ device: deviceId, locale, previewType: device.previewType, files: videos.map(v => ({ file: v.file, ...v.probe })) });
+        continue;
+      }
+      if (strict) {
+        // One image or video per locale; the video wins when both exist.
+        if (!files.length && !videos.length) { errors.push(`${where}: nothing rendered (storeshots render or storeshots video)`); continue; }
+        if (files.length > 1) warnings.push(`${where}: ${files.length} slides, only the first is used (one ${device.label} per locale)`);
+        if (videos.length > 1) warnings.push(`${where}: ${videos.length} videos, only the first is used`);
+        if (files.length && videos.length) warnings.push(`${where}: an image and a video; the video is used`);
+        if (videos.length) manifest.sets.push({ device: deviceId, locale, placement: device.placement ?? device.assetType, files: videos.map(v => ({ file: v.file, ...v.probe })) });
+        if (!files.length) continue;
+      } else {
+        if (!files.length) { errors.push(`${where}: no screenshots rendered`); continue; }
+        if (files.length > 10) errors.push(`${where}: ${files.length} screenshots, App Store allows at most 10`);
+        if (files.length < 3) warnings.push(`${where}: only ${files.length} screenshot(s); search results show 3`);
+        ((shared[device.asc] ??= {})[locale] ??= []).push([deviceId, files.length]);
+      }
 
-      const set = { device: deviceId, locale, displayType: device.asc, files: [] };
+      const set = { device: deviceId, locale, displayType: device.asc, placement: device.placement ?? device.assetType, files: [] };
       manifest.sets.push(set);
       for (const file of files) {
         const buf = readFileSync(join(dir, file)), info = pngInfo(buf);
         set.files.push({ file: join(dir, file), slide: file.replace(/^\d+-|\.png$/g, ''), width: info.width, height: info.height, alpha: info.hasAlpha, bytes: buf.length, sha256: createHash('sha256').update(buf).digest('hex') });
-        if (info.width !== device.width || info.height !== device.height) errors.push(`${where}/${file}: ${info.width}×${info.height}, expected ${device.width}×${device.height}`);
+        if (!sizeFits(device, info.width, info.height)) errors.push(`${where}/${file}: ${info.width}×${info.height}, expected ${device.width}×${device.height}`);
         if (info.hasAlpha) errors.push(`${where}/${file}: has an alpha channel (colour type ${info.colorType})`);
         const mb = statSync(join(dir, file)).size / 1e6;
         if (mb > 8) warnings.push(`${where}/${file}: ${mb.toFixed(1)} MB`);
@@ -167,7 +203,7 @@ export function check(store, { devices, locales, log = console.error }) {
           if (t.contrast < floor) errors.push(`${at}: contrast ${t.contrast}:1 against its background (need ≥ ${floor}:1, aim for 4.5:1)${contrastHint(t, 4.5)}`);
           else if (t.contrast < 4.5) warnings.push(`${at}: contrast ${t.contrast}:1 (aim for ≥ 4.5:1)${contrastHint(t, 4.5)}`);
         }
-        textRules(t, at, device, errors, warnings);
+        textRules(t, at, device, errors, warnings, strict);
         if (t.role === 'accent') continue;
         if (t.role !== 'title' && t.fontSize < device.width * TEXT_MIN) errors.push(`${at}: ${Math.round(t.fontSize)}px text is too small to read (min ${Math.round(device.width * TEXT_MIN)}px); make it bigger or cut it`);
         else if (t.role !== 'title' && t.fontSize < device.width * TEXT_TARGET) warnings.push(`${at}: ${Math.round(t.fontSize)}px text is small (aim for ≥ ${Math.round(device.width * TEXT_TARGET)}px)`);
@@ -187,6 +223,7 @@ export function check(store, { devices, locales, log = console.error }) {
       // Phones: one size per set (3D poses and the closer's fan aside), and none floating in
       // the middle of a slide: a flat phone runs off the bottom edge or hangs from the top.
       // (Poses aside: a tilted phone is 90 % of the others, 3D phones are sized by their camera.)
+      if (strict) continue; // the phone-placement rules below are about screenshot sets
       const flat = (report.devices ?? []).filter(d => d.layout !== 'fan' && !['tilt', 'lay', 'lean', 'zoom', 'spread'].includes(d.layout));
       for (const d of (report.devices ?? []).filter(d => d.visible && !['fan', 'zoom', 'spread'].includes(d.layout))) {
         const margin = Math.min(d.visible[0], d.slideWidth - d.visible[1]);
@@ -205,6 +242,13 @@ export function check(store, { devices, locales, log = console.error }) {
         const margin = d.slideHeight * 0.01;
         if (d.top > margin && d.bottom < d.slideHeight - margin) warnings.push(`${where} ${d.slide}: the phone floats inside the slide; let it run off the bottom or hang from the top`);
       }
+    }
+  }
+  // Canvases sharing a display type (iPhone Duo outer + inner) fill one set of at most 10.
+  for (const [asc, byLocale] of Object.entries(shared)) {
+    for (const [locale, list] of Object.entries(byLocale)) {
+      const total = list.reduce((n, [, c]) => n + c, 0);
+      if (list.length > 1 && total > 10) errors.push(`${locale} ${asc}: ${total} screenshots across ${list.map(([d, c]) => `${d} (${c})`).join(' + ')}; they share one set of at most 10`);
     }
   }
   // Search results show the first three slides: three different screens, not one twice.

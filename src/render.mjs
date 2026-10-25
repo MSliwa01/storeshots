@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { launchBrowser } from './browser.mjs';
+import { device as deviceSpec } from './devices.mjs';
 import { frame, genericFrame, plainFrame } from './frames.mjs';
 import { KIT_DIR } from './paths.mjs';
 import { decodePng, pngInfo } from './png.mjs';
@@ -13,6 +14,9 @@ import { usage } from './errors.mjs';
 import { screenWords } from './ocr.mjs';
 
 const fileURL = path => pathToFileURL(path).href;
+
+/** Frame `i` of an extracted clip (f00001.jpg is frame 0). */
+export const clipFrameURL = (clip, i) => fileURL(join(clip.dir, `f${String(i + 1).padStart(5, '0')}.jpg`));
 
 /**
  * A frame by name: "generic[/black|silver]", "plain[/colour[/width]]" and "none" are drawn;
@@ -32,43 +36,63 @@ function resolveFrame(name, device, log) {
   }
 }
 
-/** The design HTML with the kit, the slide size and window.SHOTS injected into <head>. */
-function buildPage(store, device, locale, log = console.error, assets = {}) {
+/**
+ * The device whose captures (and frames) a canvas shows: the canvas itself for screenshots,
+ * else `shotsFrom` (a header or an app preview shows the iPhone's captures).
+ */
+export function screenDevice(store, device) {
+  const id = device.shotsFrom;
+  if (!id || id === device.id) return device;
+  return store.config.devices?.[id] ? store.device(id) : { ...deviceSpec(id), design: device.design };
+}
+
+/**
+ * The design HTML with the kit, the slide size and window.SHOTS injected into <head>.
+ * `clips`: shot id → { dir, count, fps } of extracted video frames (`storeshots video`).
+ */
+export function buildPage(store, device, locale, log = console.error, assets = {}, clips = {}) {
   const designFile = device.design;
   if (!existsSync(designFile)) throw usage(`design not found: ${designFile}`, { fix: 'run `storeshots init --style <name>` or point devices.<id>.design at an HTML file' });
   const html = readFileSync(designFile, 'utf8');
 
-  const frameNames = new Set([device.frame, ...[...html.matchAll(/data-frame="([^"]+)"/g)].map(m => m[1])].filter(Boolean));
+  // Frames and captures belong to the screen shown; the slide size to the canvas.
+  const screen = screenDevice(store, device);
+  const defaultFrame = (screen === device ? device.frame : device.frame ?? screen.frame);
+  const frameNames = new Set([defaultFrame, ...[...html.matchAll(/data-frame="([^"]+)"/g)].map(m => m[1])].filter(Boolean));
   const frames = {};
   for (const name of frameNames) {
-    const f = resolveFrame(name, device, log);
+    const f = resolveFrame(name, screen, log);
     frames[name] = { url: f.url, width: f.width, height: f.height, screen: f.screen };
   }
   // Devices without data-frame use the device's frame; generic when none is set.
-  if (!device.frame) frames.generic = (({ url, width, height, screen }) => ({ url, width, height, screen }))(genericFrame(device));
+  if (!defaultFrame) frames.generic = (({ url, width, height, screen: s }) => ({ url, width, height, screen: s }))(genericFrame(screen));
 
   const shotIds = new Set([...Object.keys(store.shots), ...[...html.matchAll(/data-shot="([^"]+)"/g)].map(m => m[1])]);
   const shots = {}, words = {};
   for (const id of shotIds) {
-    const file = store.shotFile(device.id, locale, id);
-    if (existsSync(file)) shots[id] = fileURL(file);
+    // In a video, a recorded clip of the screen wins over its still.
+    const file = store.shotFile(screen.id, locale, id);
+    if (clips[id]) shots[id] = clipFrameURL(clips[id], 0);
+    else if (existsSync(file)) shots[id] = fileURL(file);
   }
   // The words on each phone's screen (OCR), so the kit can tell when a card, a pop-out or art
   // half-covers one, or a slide's edge cuts one.
   for (const id of new Set([...html.matchAll(/data-shot="([^"]+)"/g)].map(m => m[1]))) {
-    const file = store.shotFile(device.id, locale, id);
+    const file = store.shotFile(screen.id, locale, id);
     if (existsSync(file)) words[id] = screenWords(file, locale);
   }
 
   const icon = store.app.icon ? resolve(store.dir, store.app.icon) : null;
   const data = {
-    device: { id: device.id, width: device.width, height: device.height },
+    device: { id: screen.id, width: screen.width, height: screen.height },
+    canvas: { id: device.id, kind: device.kind, width: device.width, height: device.height },
     locale,
     copy: store.copy(locale),
     shots,
     words,
     frames,
-    defaultFrame: device.frame ?? 'generic',
+    defaultFrame: defaultFrame ?? 'generic',
+    clips: Object.fromEntries(Object.entries(clips).map(([id, c]) => [id, { base: fileURL(c.dir) + '/', count: c.count, fps: c.fps }])),
     app: { name: store.app.name, subtitle: store.app.subtitle, icon: icon && existsSync(icon) ? fileURL(icon) : null },
     assets,
   };
